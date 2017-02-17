@@ -39,6 +39,7 @@
 
 	<modules>
         <module>simulators</module>
+		<module>gui</module>
     </modules>
 
 	<repositories>
