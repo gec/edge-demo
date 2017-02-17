@@ -50,9 +50,11 @@ angular.module('edgeGui', [])
             var json = JSON.parse(message.data);
             console.log(json);
 
-            for (var key in json) {
+            $scope.message = json;
+
+            /*for (var key in json) {
                 $scope[key] = json[key];
-            }
+            }*/
             $scope.$digest();
         };
 

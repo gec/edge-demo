@@ -20,34 +20,28 @@ package io.greenbus.edge.demo.gui
 
 import java.util.concurrent.atomic.AtomicReference
 
-import com.typesafe.scalalogging.LazyLogging
+import akka.actor.ActorSystem
+import com.typesafe.config.ConfigFactory
+
+import scala.concurrent.Await
 
 object EdgeGui {
 
   val globalSocketMgr = new AtomicReference[SocketMgr](null)
 
   def main(args: Array[String]): Unit = {
+    val rootConfig = ConfigFactory.load()
+    val slf4jConfig = ConfigFactory.parseString("""akka { loggers = ["akka.event.slf4j.Slf4jLogger"] }""")
+    val akkaConfig = slf4jConfig.withFallback(rootConfig)
+    val system = ActorSystem("brokerTest", akkaConfig)
 
-    val mgr = new GuiSocketMgr
+    val linkMgr = system.actorOf(PeerLinkMgr.props)
+
+    val mgr = new GuiSocketMgr(linkMgr)
     globalSocketMgr.set(mgr)
 
     val server = new EdgeGuiServer(8080)
     server.run()
-  }
-}
-
-class GuiSocketMgr extends SocketMgr with LazyLogging {
-  def connected(socket: Socket): Unit = {
-    logger.info("Got socket connected " + socket)
-    socket.send(""" { "second" : "thing" } """)
-  }
-
-  def disconnected(socket: Socket): Unit = {
-    logger.info("Got socket disconnected " + socket)
-  }
-
-  def handle(text: String, socket: Socket): Unit = {
-    logger.info("Got socket test: " + text + ", " + socket)
   }
 }
 

@@ -21,6 +21,19 @@
                     <header>../APACHE_FILE_HEADER</header>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>com.mycila.maven-license-plugin</groupId>
+                <artifactId>maven-license-plugin</artifactId>
+                <configuration>
+                    <header>../APACHE_FILE_HEADER</header>
+                    <excludes>
+                        <exclude>src/main/resources/web/css/*</exclude>
+                        <exclude>src/main/resources/web/fonts/*</exclude>
+                        <exclude>src/main/resources/web/images/*</exclude>
+                        <exclude>src/main/resources/web/js/*</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
