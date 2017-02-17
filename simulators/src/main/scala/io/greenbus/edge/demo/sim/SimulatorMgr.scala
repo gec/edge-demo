@@ -22,63 +22,6 @@ import com.typesafe.scalalogging.LazyLogging
 import io.greenbus.edge.client._
 import io.greenbus.edge._
 
-object PvEndpointBuilder {
-
-  /*
-
-    val indexes = Map(Path("index01") -> ValueDouble(3.14d * n))
-    val meta = Map(Path("meta01") -> ValueInt64(-12345 * n))
-    val latestKvs = Map(
-      Path("key01") -> LatestKeyValueEntry(
-        ValueString("the current value"),
-        MetadataDesc(
-          Map(Path("keyIndex01") -> ValueString("a string")),
-          Map(Path("keyMeta01") -> ValueBool(false)))))
-
-    val timeSeries = Map(
-      Path("key02") -> TimeSeriesValueEntry(
-        TimeSeriesSample(System.currentTimeMillis(), ValueDouble(3.14 * n)),
-        MetadataDesc(
-          Map(Path("keyIndex02") -> ValueString("a string 2")),
-          Map(Path("keyMeta02") -> ValueBool(false)))))
-
-    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, Map())
-
-case class OutputEntry(initialValue: PublisherOutputValueStatus, meta: MetadataDesc)
-   */
-  def build(): ClientEndpointPublisherDesc = {
-    val indexes = Map.empty[Path, IndexableValue]
-    val meta = Map.empty[Path, Value]
-    val latestKvs = Map.empty[Path, LatestKeyValueEntry]
-
-    val timeSeries = Map(
-      PvMapping.pvOutputPower -> TimeSeriesValueEntry(
-        TimeSeriesSample(System.currentTimeMillis(), ValueDouble(0.0)),
-        MetadataDesc(
-          Map(Path("gridValueType") -> ValueString("outputPower")),
-          Map())),
-      PvMapping.pvCapacity -> TimeSeriesValueEntry(
-        TimeSeriesSample(System.currentTimeMillis(), ValueDouble(0.0)),
-        MetadataDesc(
-          Map(),
-          Map())))
-
-    val outputs = Map(
-      PvMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map())),
-      PvMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map())))
-
-    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, Map())
-  }
-
-}
-
-/*class PvSimPair(ioThread: CallMarshaller, id: String, params: PvParams) {
-  private val sim = new PvSim(params, PvSim.PvState(1.0, fault = false))
-  private val endpoint = new EndpointPublisherImpl(ioThread, NamedEndpointId(id), PvEndpointBuilder.build())
-  def simulator: SimulatorComponent = sim
-  def publisher: EndpointPublisher = endpoint
-}*/
-
 class SimulatorPublisherPair(eventThread: CallMarshaller, sim: SimulatorComponent, endId: String, desc: ClientEndpointPublisherDesc) {
   private val id = NamedEndpointId(endId)
   private val endpoint = new EndpointPublisherImpl(eventThread, id, desc)
@@ -87,21 +30,31 @@ class SimulatorPublisherPair(eventThread: CallMarshaller, sim: SimulatorComponen
   def publisher: EndpointPublisher = endpoint
 }
 
-class SimulatorMgr(eventThread: CallMarshaller) extends LazyLogging {
+class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord) extends LazyLogging {
 
-  //private var pvs = Vector.empty[PvSim]
   private var publisherPairs = Vector.empty[SimulatorPublisherPair]
 
   private val pv1 = new PvSim(PvParams.basic, PvSim.PvState(1.0, fault = false))
-  //pvs = pvs :+ pv1
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pv1, "PV1", PvEndpointBuilder.build())
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pv1, "PV1", EndpointBuilders.buildPv())
+
+  private val ess1 = {
+    val params = EssParams.basic
+    new EssSim(params, EssSim.EssState(EssSim.Constant, 0.5 * params.capacity, 0.0, 0.0, false))
+  }
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, ess1, "ESS1", EndpointBuilders.buildEss())
+
+  private val chp1 = new ChpSim(ChpParams.basic, ChpSim.ChpState(0.0, 0.0, false))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, chp1, "CHP1", EndpointBuilders.buildChp())
+
+  private val load1 = new LoadSim(LoadMapping.defaultParams, load, LoadSim.LoadState(0))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, load1, "LOAD1", EndpointBuilders.buildLoad())
 
   private val simulator = new Simulator(
     SimulatorState(0.0, 0.0, 0.0, 0.0, pccStatus = true, custBkrStatus = true),
-    chps = Seq(),
-    esses = Seq(),
+    chps = Seq(chp1),
+    esses = Seq(ess1),
     pvs = Seq(pv1),
-    loads = Seq())
+    loads = Seq(load1))
 
   def publishers: Seq[(EndpointId, EndpointPublisher)] = publisherPairs.map(p => (p.endpointId, p.publisher))
 

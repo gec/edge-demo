@@ -20,7 +20,7 @@ package io.greenbus.edge.demo.sim
 
 import java.util.Calendar
 
-import scala.concurrent.Future
+import io.greenbus.edge.{ NumericConvertible, Value }
 
 object Utils {
 
@@ -95,75 +95,17 @@ object Utils {
       timeSeries(i)._2
     }
   }
-  /*
-  def doubleMeas(v: Double, time: Option[Long] = None): Measurement = {
-    val b = Measurement.newBuilder()
-      .setDoubleVal(v)
-      .setType(Measurement.Type.DOUBLE)
 
-    time.foreach(b.setTime)
-
-    b.build()
-  }
-  def intMeas(v: Int): Measurement = {
-    Measurement.newBuilder()
-      .setIntVal(v)
-      .setType(Measurement.Type.INT)
-      .build()
-  }
-  def boolMeas(v: Boolean): Measurement = {
-    Measurement.newBuilder()
-      .setBoolVal(v)
-      .setType(Measurement.Type.BOOL)
-      .build()
-  }
-
-  def commandReqAsDouble(cmdReq: CommandRequest): Option[Double] = {
-    if (cmdReq.hasIntVal) {
-      Some(cmdReq.getIntVal.toDouble)
-    } else if (cmdReq.hasDoubleVal) {
-      Some(cmdReq.getDoubleVal)
-    } else {
-      None
+  def valueAsDouble(v: Value): Option[Double] = {
+    v match {
+      case nc: NumericConvertible => Some(nc.toDouble)
+      case _ => None
     }
   }
-
-  def commandReqInt(cmdReq: CommandRequest): Option[Long] = {
-    if (cmdReq.hasIntVal) {
-      Some(cmdReq.getIntVal)
-    } else {
-      None
+  def valueAsInt(v: Value): Option[Long] = {
+    v match {
+      case nc: NumericConvertible => Some(nc.toLong)
+      case _ => None
     }
   }
-
-  def commandReqAsInt(cmdReq: CommandRequest): Option[Long] = {
-    if (cmdReq.hasIntVal) {
-      Some(cmdReq.getIntVal)
-    } else if (cmdReq.hasDoubleVal) {
-      Some(cmdReq.getDoubleVal.toInt)
-    } else {
-      None
-    }
-  }
-
-  def measAnyNumericToDouble(m: Measurement): Option[Double] = {
-    if (m.hasDoubleVal) Some(m.getDoubleVal) else None
-  }
-  def measToInt(m: Measurement): Option[Long] = {
-    if (m.hasIntVal) Some(m.getIntVal) else None
-  }
-  def measToBoolOpt(m: Measurement): Option[Boolean] = {
-    if (m.hasBoolVal) Some(m.getBoolVal) else None
-  }
-
-  def whenNotNil[A, B](coll: Seq[A])(f: => Future[Seq[B]]): Future[Seq[B]] = {
-    if (coll.nonEmpty) f else Future.successful(Seq())
-  }
-
-  def findPoint(equip: String, pts: Seq[Point], typ: String): Point = {
-    pts.find(_.getTypesList.contains(typ)).getOrElse(throw new IllegalArgumentException(s"Could not find Point of type $typ for $equip"))
-  }
-  def findCommand(equip: String, cmds: Seq[Command], typ: String): Command = {
-    cmds.find(_.getTypesList.contains(typ)).getOrElse(throw new IllegalArgumentException(s"Could not find Command of type $typ for $equip"))
-  }*/
 }

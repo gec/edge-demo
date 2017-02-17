@@ -26,50 +26,6 @@ import io.greenbus.edge.client.{ EdgeConnection, EdgeConnectionImpl }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-/*
-
-  def runPublisher(conn: EdgeConnection, eventThread: CallMarshaller): Unit = {
-
-    val desc = buildDesc(1)
-    val sessionId = PersistenceSessionId(UUID.randomUUID(), 0)
-    val pub = new EndpointPublisherImpl(eventThread, testEndpointId, desc)
-
-    val pubConnFut = conn.connectPublisher(testEndpointId, sessionId, pub)
-    val publisherConnected = Await.result(pubConnFut, 5000.milliseconds)
-
-    logger.info("Publisher connected?")
-
-    pub.keyValueStreams.get(Path("key01")).foreach(_.push(ValueString("the updated value")))
-    pub.timeSeriesStreams.get(Path("key02")).foreach(_.push(TimeSeriesSample(System.currentTimeMillis(), ValueDouble(55.3))))
-
-    pub.flush()
-
-    pub.outputReceiver.bind { batch =>
-      batch.requests.foreach { req =>
-        println(s"Got request ${req.key}, ${req.outputRequest}")
-        req.resultAsync(OutputSuccess(None))
-      }
-    }
-
-    System.in.read()
-  }
-
-  def main(args: Array[String]): Unit = {
-    val service = new AmqpIoImpl()
-
-    val connFut = service.connect("127.0.0.1", 50001, 10000)
-
-    val conn = Await.result(connFut, 5000.milliseconds)
-
-    val sessionFut = conn.open()
-
-    val session = Await.result(sessionFut, 5000.milliseconds)
-
-    val edgeConnection = new EdgeConnectionImpl(service.eventLoop, session)
-
-    runPublisher(edgeConnection, service.eventLoop)
-  }
- */
 object EdgeConnectionMgr {
 
   case object DoConnect
@@ -92,9 +48,3 @@ class EdgeConnectionMgr(service: AmqpService) extends Actor with LazyLogging {
   }
 }
 
-/*class PublisherMgr extends Actor with LazyLogging {
-
-  def receive = {
-
-  }
-}*/

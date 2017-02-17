@@ -18,108 +18,33 @@
  */
 package io.greenbus.edge.demo.sim
 
-/*trait TypeConfiguration[Params, Result] {
-  val equipmentType: String
-  val pointTypes: Seq[String]
-  val commandTypes: Seq[String]
+import io.greenbus.edge._
 
-  def extractParams(v: StoredValue): Option[Params]
-
-  def defaultParams: Params
-
-  def populate(equip: Entity, params: Params, points: Seq[Point], commands: Seq[Command]): Result
-}
-
-
-object EssMapping extends TypeConfiguration[EssParams, EssMapping] {
+object EssMapping {
 
   val equipmentType: String = "ESS"
 
-  val percentSoc = "%SOC"
-  val mode = "ESSMode"
-  val socMax = "SOC_Max"
-  val socMin = "SOC_Min"
-  val chargeDischargeRate = "OutputPower"
-  val chargeRateMax = "ChargeRateMax"
-  val dischargeRateMax = "DischargeRateMax"
-  val capacity = "EnergyCapacity"
-  val efficiency = "Efficiency"
-  val chargeRateTarget = "ChargeRateTarget"
-  val faultStatus = "FaultStatus"
+  val percentSoc = Path("SOC")
+  val mode = Path("ESSMode")
+  val socMax = Path("SOC_Max")
+  val socMin = Path("SOC_Min")
+  val chargeDischargeRate = Path("OutputPower")
+  val chargeRateMax = Path("ChargeRateMax")
+  val dischargeRateMax = Path("DischargeRateMax")
+  val capacity = Path("EnergyCapacity")
+  val efficiency = Path("Efficiency")
+  val chargeRateTarget = Path("ChargeRateTarget")
+  val faultStatus = Path("FaultStatus")
 
   val pointTypes = Seq(percentSoc, socMax, socMin, chargeDischargeRate, chargeRateMax, dischargeRateMax, capacity, efficiency, chargeRateTarget, mode, faultStatus)
 
-  val setChargeRate = "SetChargeRateTarget"
-  val setBatteryMode = "SetMode"
-  val faultEnable = "FaultEnable"
-  val faultDisable = "FaultDisable"
+  val setChargeRate = Path("SetChargeRateTarget")
+  val setBatteryMode = Path("SetMode")
+  val faultEnable = Path("FaultEnable")
+  val faultDisable = Path("FaultDisable")
   val commandTypes = Seq(setChargeRate, setBatteryMode, faultEnable, faultDisable)
 
-  def defaultParams: EssParams = EssParams(100.0, 100.0, 0.0, 50.0, 50.0, 0.8)
-
-  def populate(equip: Entity, params: EssParams, points: Seq[Point], commands: Seq[Command]): EssMapping = {
-    EssMapping(equip,
-      params,
-      percentSoc = findPoint(equip.getName, points, percentSoc),
-      socMax = findPoint(equip.getName, points, socMax),
-      socMin = findPoint(equip.getName, points, socMin),
-      chargeDischargeRate = findPoint(equip.getName, points, chargeDischargeRate),
-      chargeRateMax = findPoint(equip.getName, points, chargeRateMax),
-      dischargeRateMax = findPoint(equip.getName, points, dischargeRateMax),
-      capacity = findPoint(equip.getName, points, capacity),
-      efficiency = findPoint(equip.getName, points, efficiency),
-      chargeRateTarget = findPoint(equip.getName, points, chargeRateTarget),
-      batteryMode = findPoint(equip.getName, points, mode),
-      faultStatus = findPoint(equip.getName, points, faultStatus),
-      setChargeRate = findCommand(equip.getName, commands, setChargeRate),
-      setBatteryMode = findCommand(equip.getName, commands, setBatteryMode),
-      faultEnable = findCommand(equip.getName, commands, faultEnable),
-      faultDisable = findCommand(equip.getName, commands, faultDisable))
-  }
-
-  def extractParams(v: StoredValue): Option[EssParams] = {
-    Configuration.svToJson[EssParams](v, _.as[EssParams])
-  }
-
-  def updates(mapping: EssMapping, current: EssState, prevOpt: Option[EssState]): Seq[(ModelUUID, Measurement)] = {
-    import com.greenenergycorp.mmc.sim.Mappings._
-
-    val extractors = Seq(
-      ((current: EssState, prev: EssState) => current.energy != prev.energy, (mapping.percentSoc.getUuid, doubleMeas(calcSoc(mapping.params, current)))),
-      ((current: EssState, prev: EssState) => current.mode != prev.mode, (mapping.batteryMode.getUuid, intMeas(current.mode.numeric))),
-      ((current: EssState, prev: EssState) => current.output != prev.output, (mapping.chargeDischargeRate.getUuid, doubleMeas(current.output))),
-      ((current: EssState, prev: EssState) => current.target != prev.target, (mapping.chargeRateTarget.getUuid, doubleMeas(current.target))))
-
-    extractUpdates(current, prevOpt, extractors)
-  }
-
-  def calcSoc(params: EssParams, state: EssState): Double = {
-    val soc = if (params.capacity != 0) state.energy / params.capacity else 0.0
-    soc * 100.0
-  }
 }
-case class EssMapping(equip: Entity,
-                      params: EssParams,
-                      percentSoc: Point,
-                      socMax: Point,
-                      socMin: Point,
-                      chargeDischargeRate: Point,
-                      chargeRateMax: Point,
-                      dischargeRateMax: Point,
-                      capacity: Point,
-                      efficiency: Point,
-                      chargeRateTarget: Point,
-                      batteryMode: Point,
-                      faultStatus: Point,
-                      setChargeRate: Command,
-                      setBatteryMode: Command,
-                      faultEnable: Command,
-                      faultDisable: Command) {
-
-  def measPoints = Seq(percentSoc, batteryMode, chargeRateTarget)
-}
-
-case class InitialEssMeas(mode: Option[Measurement], percentSoc: Option[Measurement], chargeRateTarget: Option[Measurement])*/
 
 object EssParams {
   import play.api.libs.json._
@@ -187,29 +112,51 @@ object EssSim {
       target
     }
   }
+
+  def calcSoc(params: EssParams, state: EssState): Double = {
+    val soc = if (params.capacity != 0) state.energy / params.capacity else 0.0
+    soc * 100.0
+  }
 }
 import EssSim._
-class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState) {
+class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState) extends SimulatorComponent {
 
   private var state = initialState
 
   def currentState: EssState = state
 
-  /*def updates(power: Double, current: Double, voltage: Double): Seq[(ModelUUID, MeasValueHolder)] = {
-    val params = mapping.params
+  def updates(line: LineState, time: Long): Seq[SimUpdate] = {
+    import EssMapping._
     Seq(
-      (mapping.percentSoc.getUuid, DoubleMeasValue(EssMapping.calcSoc(params, state))),
-      (mapping.socMax.getUuid, DoubleMeasValue(params.socMax)),
-      (mapping.socMin.getUuid, DoubleMeasValue(params.socMin)),
-      (mapping.chargeDischargeRate.getUuid, DoubleMeasValue(state.output)),
-      (mapping.chargeRateMax.getUuid, DoubleMeasValue(params.maxChargeRate)),
-      (mapping.dischargeRateMax.getUuid, DoubleMeasValue(params.maxDischargeRate)),
-      (mapping.capacity.getUuid, DoubleMeasValue(params.capacity)),
-      (mapping.efficiency.getUuid, DoubleMeasValue(params.efficiency)),
-      (mapping.chargeRateTarget.getUuid, DoubleMeasValue(state.target)),
-      (mapping.batteryMode.getUuid, IntMeasValue(state.mode.numeric)),
-      (mapping.faultStatus.getUuid, BoolMeasValue(state.fault)))
-  }*/
+      TimeSeriesUpdate(percentSoc, ValueDouble(EssSim.calcSoc(params, state))),
+      TimeSeriesUpdate(socMax, ValueDouble(params.socMax)),
+      TimeSeriesUpdate(socMin, ValueDouble(params.socMin)),
+      TimeSeriesUpdate(chargeDischargeRate, ValueDouble(state.output)),
+      TimeSeriesUpdate(chargeRateMax, ValueDouble(params.maxChargeRate)),
+      TimeSeriesUpdate(dischargeRateMax, ValueDouble(params.maxDischargeRate)),
+      TimeSeriesUpdate(capacity, ValueDouble(params.capacity)),
+      TimeSeriesUpdate(efficiency, ValueDouble(params.efficiency)),
+      TimeSeriesUpdate(chargeRateTarget, ValueDouble(state.target)),
+      TimeSeriesUpdate(mode, ValueUInt64(state.mode.numeric)),
+      TimeSeriesUpdate(faultStatus, ValueBool(state.fault)))
+  }
+
+  def handlers: Map[Path, (Option[Value]) => Boolean] = {
+    import EssMapping._
+
+    def chargeRateHandler(vOpt: Option[Value]): Boolean = {
+      vOpt.flatMap(Utils.valueAsDouble).exists(onTargetChargeRateUpdate)
+    }
+    def setModeHandler(vOpt: Option[Value]): Boolean = {
+      vOpt.flatMap(Utils.valueAsInt).map(_.toInt).exists(onModeUpdate)
+    }
+
+    Map(
+      (setChargeRate, chargeRateHandler _),
+      (setBatteryMode, setModeHandler _),
+      (faultEnable, { _: Option[Value] => onFaultEnable() }),
+      (faultDisable, { _: Option[Value] => onFaultDisable() }))
+  }
 
   def tick(deltaMs: Long): Unit = {
     if (!state.fault) {
@@ -234,34 +181,19 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
     }
   }
 
-  /*def controlHandlers(): Seq[(ModelUUID, CommandRequest => Unit)] = {
-
-    def chargeRateHandler(cmdReq: CommandRequest): Unit = {
-      Utils.commandReqAsDouble(cmdReq).foreach(onTargetChargeRateUpdate)
-    }
-    def setModeHandler(cmdReq: CommandRequest): Unit = {
-      Utils.commandReqAsInt(cmdReq).map(_.toInt).foreach(onModeUpdate)
-    }
-
-    Seq(
-      (mapping.setChargeRate.getUuid, chargeRateHandler),
-      (mapping.setBatteryMode.getUuid, setModeHandler),
-      (mapping.faultEnable.getUuid, _ => onFaultEnable()),
-      (mapping.faultDisable.getUuid, _ => onFaultDisable()))
-  }*/
-
   def setSmoothTarget(target: Double): Unit = {
     state = state.copy(output = target)
   }
 
-  private def onModeUpdate(mode: Int): Unit = {
+  private def onModeUpdate(mode: Int): Boolean = {
     EssMode.parse(mode).foreach {
       case modeUpdate @ Constant => state = state.copy(mode = modeUpdate, output = if (!state.fault) state.target else 0.0)
       case modeUpdate => state = state.copy(mode = modeUpdate)
     }
+    true
   }
 
-  private def onTargetChargeRateUpdate(target: Double): Unit = {
+  private def onTargetChargeRateUpdate(target: Double): Boolean = {
     state.mode match {
       case Constant =>
         val boundTarget = boundTargetRate(target, params)
@@ -278,14 +210,24 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
         val boundTarget = boundTargetRate(target, params)
         state = state.copy(target = boundTarget)
     }
+
+    true
   }
 
-  private def onFaultEnable(): Unit = {
-    state = state.copy(output = 0.0, fault = true)
+  private def onFaultEnable(): Boolean = {
+    if (!state.fault) {
+      state = state.copy(fault = true)
+      true
+    } else {
+      false
+    }
   }
-  private def onFaultDisable(): Unit = {
+  private def onFaultDisable(): Boolean = {
     if (state.fault) {
-      state = state.copy(output = state.target, fault = false)
+      state = state.copy(fault = false)
+      true
+    } else {
+      false
     }
   }
 

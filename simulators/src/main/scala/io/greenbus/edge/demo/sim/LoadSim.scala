@@ -18,6 +18,8 @@
  */
 package io.greenbus.edge.demo.sim
 
+import io.greenbus.edge.{ Path, Value, ValueDouble }
+
 object LoadParams {
   import play.api.libs.json._
   implicit val writer = Json.writes[LoadParams]
@@ -26,56 +28,20 @@ object LoadParams {
 
 case class LoadParams(dataIndex: Int, stageReduction1: Option[Double], stageReduction2: Option[Double], stageReduction3: Option[Double], voltage: Option[Double])
 
-/*object LoadMapping extends TypeConfiguration[LoadParams, LoadMapping] {
+object LoadMapping {
 
   val equipmentType = "Load"
 
-  val powerType = "LoadPower"
-  val voltageType = "Voltage"
-  val currentType = "Current"
-  val kvarType = "kvar"
-  val pointTypes = Seq(powerType, voltageType, currentType, kvarType)
+  val power = Path("LoadPower")
+  val voltage = Path("Voltage")
+  val current = Path("Current")
+  val kvar = Path("kvar")
+  val pointTypes = Seq(power, voltage, current, kvar)
 
   val commandTypes = Seq()
 
-  def populate(equip: Entity, params: LoadParams, points: Seq[Point], commands: Seq[Command]): LoadMapping = {
-    LoadMapping(equip,
-      params,
-      loadPower = findPoint(equip.getName, points, powerType),
-      voltage = findPoint(equip.getName, points, voltageType),
-      current = findPoint(equip.getName, points, currentType),
-      kvar = findPoint(equip.getName, points, kvarType))
-  }
-
-  def extractParams(v: StoredValue): Option[LoadParams] = {
-    Configuration.svToJson[LoadParams](v, _.as[LoadParams])
-  }
-
   def defaultParams: LoadParams = LoadParams(0, Some(0.95), Some(0.9), Some(0.85), Some(480))
-
-  def update(now: Long, mapping: LoadMapping, sim: LoadSim): (Double, Seq[(ModelUUID, Measurement)]) = {
-    val power = sim.valueAt(now)
-
-    (power, Seq(
-      (mapping.loadPower.getUuid, doubleMeas(power))))
-  }
-
-  def updates(now: Long, mapping: LoadMapping, sim: LoadSim): Seq[(ModelUUID, Measurement)] = {
-    val power = sim.valueAt(now)
-
-    Seq(
-      (mapping.loadPower.getUuid, doubleMeas(power)))
-  }
-
 }
-
-case class LoadMapping(
-  equip: Entity,
-  params: LoadParams,
-  loadPower: Point,
-  voltage: Point,
-  current: Point,
-  kvar: Point)*/
 
 object LoadSim {
 
@@ -83,7 +49,8 @@ object LoadSim {
 }
 
 import LoadSim._
-class LoadSim( /*mapping: LoadMapping,*/ params: LoadParams, data: LoadRecord, initialState: LoadState) {
+import io.greenbus.edge.Path
+class LoadSim(params: LoadParams, data: LoadRecord, initialState: LoadState) extends SimulatorComponent {
 
   private val stageReduction1 = params.stageReduction1.getOrElse(0.95)
   private val stageReduction2 = params.stageReduction1.getOrElse(0.9)
@@ -95,14 +62,17 @@ class LoadSim( /*mapping: LoadMapping,*/ params: LoadParams, data: LoadRecord, i
     state = state.copy(reductionStage = stage)
   }
 
-  /*def updates(power: Double, current: Double, voltage: Double): Seq[(ModelUUID, MeasValueHolder)] = {
+  def updates(line: LineState, time: Long): Seq[SimUpdate] = {
+    val power = valueAt(time)
     val kvars = power * 0.02
     Seq(
-      (mapping.loadPower.getUuid, DoubleMeasValue(power)),
-      (mapping.current.getUuid, DoubleMeasValue(current)),
-      (mapping.voltage.getUuid, DoubleMeasValue(voltage)),
-      (mapping.kvar.getUuid, DoubleMeasValue(kvars)))
-  }*/
+      TimeSeriesUpdate(LoadMapping.power, ValueDouble(power)),
+      TimeSeriesUpdate(LoadMapping.current, ValueDouble(line.current)),
+      TimeSeriesUpdate(LoadMapping.voltage, ValueDouble(line.voltage)),
+      TimeSeriesUpdate(LoadMapping.kvar, ValueDouble(kvars)))
+  }
+
+  def handlers: Map[Path, (Option[Value]) => Boolean] = Map()
 
   def valueAt(time: Long): Double = {
 

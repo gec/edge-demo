@@ -54,51 +54,6 @@ object PvMapping {
   def defaultParams: PvParams = PvParams(2000, EllipseParams(0.035, 200, -12))
 }
 
-/*object PvMapping extends TypeConfiguration[PvParams, PvMapping] {
-
-  val equipmentType = "PV"
-
-  val pvOutputPower = "OutputPower"
-  val pvCapacity = "PowerCapacity"
-  val faultStatus = "FaultStatus"
-
-  val faultEnable = "FaultEnable"
-  val faultDisable = "FaultDisable"
-
-  val pointTypes: Seq[String] = Seq(pvOutputPower, pvCapacity, faultStatus)
-  val commandTypes: Seq[String] = Seq(faultEnable, faultDisable)
-
-  def defaultParams: PvParams = PvParams(2000, EllipseParams(0.035, 200, -12))
-
-  def extractParams(v: StoredValue): Option[PvParams] = {
-    Configuration.svToJson[PvParams](v, _.as[PvParams])
-  }
-
-  def populate(equip: Entity, params: PvParams, points: Seq[Point], commands: Seq[Command]): PvMapping = {
-    PvMapping(equip,
-      params,
-      outputPower = findPoint(equip.getName, points, pvOutputPower),
-      capacity = findPoint(equip.getName, points, pvCapacity),
-      faultStatus = findPoint(equip.getName, points, faultStatus),
-      faultEnable = findCommand(equip.getName, commands, faultEnable),
-      faultDisable = findCommand(equip.getName, commands, faultDisable))
-  }
-
-  /*def pvUpdate(mapping: PvMapping, sim: PvSim): (Double, Seq[(ModelUUID, Measurement)]) = {
-    val now = System.currentTimeMillis()
-    val power = sim.atTime(now)
-    (power, Seq((mapping.outputPower.getUuid, Utils.doubleMeas(power, Some(now)))))
-  }*/
-
-  /*def updates(mapping: PvMapping, sim: PvSim): Seq[(ModelUUID, Measurement)] = {
-    val now = System.currentTimeMillis()
-    val power = sim.atTime(now)
-    Seq((mapping.outputPower.getUuid, Utils.doubleMeas(power, Some(now))))
-  }*/
-}
-
-case class PvMapping(equip: Entity, params: PvParams, outputPower: Point, capacity: Point, faultStatus: Point, faultEnable: Command, faultDisable: Command)
-*/
 object PvSim {
   import Utils._
 
@@ -119,18 +74,11 @@ object PvSim {
 import PvSim._
 import io.greenbus.edge.proto.SampleValue
 import io.greenbus.edge.{ Path, Value, ValueBool, ValueDouble }
-class PvSim( /*mapping: PvMapping,*/ params: PvParams, initialState: PvState) extends SimulatorComponent {
+class PvSim(params: PvParams, initialState: PvState) extends SimulatorComponent {
 
   private var state = initialState
 
   def currentState: PvState = state
-
-  /*def updates(power: Double, current: Double, voltage: Double): Seq[(ModelUUID, MeasValueHolder)] = {
-    Seq(
-      (mapping.faultStatus.getUuid, BoolMeasValue(state.fault)),
-      (mapping.outputPower.getUuid, DoubleMeasValue(power)),
-      (mapping.capacity.getUuid, DoubleMeasValue(mapping.params.curve.b)))
-  }*/
 
   def updates(line: LineState, time: Long): Seq[SimUpdate] = {
     Seq(
@@ -160,12 +108,6 @@ class PvSim( /*mapping: PvMapping,*/ params: PvParams, initialState: PvState) ex
   def valueWithoutReduction(time: Long): Double = {
     PvSim.powerAtTime(time, params.curve)
   }
-
-  /*def controlHandlers(): Seq[(ModelUUID, CommandRequest => Unit)] = {
-    Seq(
-      (mapping.faultEnable.getUuid, _ => onFaultEnable()),
-      (mapping.faultDisable.getUuid, _ => onFaultDisable()))
-  }*/
 
   private def onFaultEnable(): Boolean = {
     if (!state.fault) {

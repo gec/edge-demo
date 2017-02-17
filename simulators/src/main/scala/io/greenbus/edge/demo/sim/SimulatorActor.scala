@@ -39,7 +39,7 @@ class SimulatorActor extends Actor with CallMarshalActor with LazyLogging {
   import SimulatorActor._
 
   private val sessionId = PersistenceSessionId(UUID.randomUUID(), 0)
-  private val mgr = new SimulatorMgr(marshaller)
+  private val mgr = new SimulatorMgr(marshaller, LoadParser.fromFile("data/olney-2014-load-hourly.tsv"))
   private val publishers = mgr.publishers
 
   self ! DoSetup
