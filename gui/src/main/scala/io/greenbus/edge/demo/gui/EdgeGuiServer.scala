@@ -25,13 +25,13 @@ import org.eclipse.jetty.util.resource.Resource
 import org.eclipse.jetty.websocket.api.{ Session, WebSocketAdapter }
 import org.eclipse.jetty.websocket.servlet.{ WebSocketServlet, WebSocketServletFactory }
 
-object WebApp {
+class EdgeGuiServer(port: Int) {
 
-  def main(args: Array[String]): Unit = {
+  def run(): Unit = {
 
     val server = new Server
     val connector = new ServerConnector(server)
-    connector.setPort(8080)
+    connector.setPort(port)
     server.addConnector(connector)
 
     val ctx = new ServletContextHandler(ServletContextHandler.SESSIONS)
@@ -40,13 +40,8 @@ object WebApp {
     ctx.setContextPath("/")
     server.setHandler(ctx)
 
-    //    val holderStatic = new ServletHolder("static-home", classOf[DefaultServlet])
-    //    holderStatic.setInitParameter("resourceBase", homePath)
-    //    holderStatic.setInitParameter("dirAllowed", "true")
-    //    holderStatic.setInitParameter("pathInfoOnly", "true")
-    //    ctx.addServlet(holderStatic, "/home/*")
-
     val holder = new ServletHolder("edgegui", classOf[EdgeServlet])
+    new ServletHolder()
     holder.setInitParameter("dirAllowed", "true")
     holder.setInitParameter("pathInfoOnly", "true")
     ctx.addServlet(holder, "/socket/*")
@@ -65,13 +60,26 @@ object WebApp {
   }
 }
 
-class EdgeServlet extends WebSocketServlet {
+class EdgeServlet extends WebSocketServlet with LazyLogging {
   def configure(webSocketServletFactory: WebSocketServletFactory): Unit = {
+    logger.info("Got servlet configure " + this)
     webSocketServletFactory.register(classOf[EdgeSocket])
   }
 }
 
+class SessionSocketImpl(session: Session) extends Socket with LazyLogging {
+  def send(text: String): Unit = {
+    try {
+      session.getRemote.sendString(text)
+    } catch {
+      case ex: Throwable => logger.warn("Problem writing to socket: " + ex)
+    }
+  }
+}
+
 class EdgeSocket extends WebSocketAdapter with LazyLogging {
+  private val mgr = EdgeGui.globalSocketMgr.get()
+  private var socketOpt = Option.empty[Socket]
 
   override def onWebSocketBinary(payload: Array[Byte], offset: Int, len: Int): Unit = {
     logger.info("Got web socket binary")
@@ -79,7 +87,11 @@ class EdgeSocket extends WebSocketAdapter with LazyLogging {
   }
 
   override def onWebSocketConnect(sess: Session): Unit = {
-    logger.info("Got web socket connect")
+    val sock = new SessionSocketImpl(sess)
+    socketOpt = Some(sock)
+    mgr.connected(sock)
+
+    logger.info("Got web socket connect " + this)
     try {
       sess.getRemote.sendString(""" {"blah" : "meh"} """)
     } catch {
@@ -96,11 +108,15 @@ class EdgeSocket extends WebSocketAdapter with LazyLogging {
 
   override def onWebSocketText(message: String): Unit = {
     logger.info("Got web socket text: " + message)
+    socketOpt.foreach { sock =>
+      mgr.handle(message, sock)
+    }
     super.onWebSocketText(message)
   }
 
   override def onWebSocketClose(statusCode: Int, reason: String): Unit = {
     logger.info("Got web socket close")
+    socketOpt.foreach(mgr.disconnected)
     super.onWebSocketClose(statusCode, reason)
   }
 }
