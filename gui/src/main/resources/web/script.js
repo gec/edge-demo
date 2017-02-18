@@ -41,6 +41,19 @@ angular.module('edgeGui', [])
         ws.onopen = function(){
             console.log("Socket has been opened!");
             console.log(ws);
+
+            var obj = {
+                subscription_request : {
+                    content : {
+                        endpoint_set_prefix : [{
+                            part: [  ]
+
+                        }]
+                    }
+                }
+            };
+
+            ws.send(JSON.stringify(obj))
         };
 
         ws.onmessage = function(message) {

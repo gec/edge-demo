@@ -18,13 +18,16 @@
  */
 package io.greenbus.edge.demo.gui
 
-import akka.actor.{ Actor, ActorRef, PoisonPill, Props }
+import akka.actor.{Actor, ActorRef, PoisonPill, Props}
+import com.google.protobuf.util.JsonFormat
 import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge.{ ClientSubscriptionParams, Path }
+import io.greenbus.edge.{ClientSubscriptionParams, Path}
 import io.greenbus.edge.amqp.AmqpService
-import io.greenbus.edge.client.{ EdgeConnection, EdgeConnectionImpl, EdgeSubscription }
+import io.greenbus.edge.client.{EdgeConnection, EdgeConnectionImpl, EdgeSubscription}
+import io.greenbus.edge.proto.ClientToServerMessage
+import io.greenbus.edge.proto.convert.Conversions
 
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 object PeerLinkMgr {
@@ -82,13 +85,33 @@ object PeerLink {
 class PeerLink(socket: Socket) extends Actor with LazyLogging {
   import PeerLink._
 
+  private val printer = JsonFormat.printer()
+  private val parser = JsonFormat.parser()
+
   self ! DoInit
 
   def receive = {
     case DoInit =>
-      socket.send(""" { "from" : "actor" } """)
-    case FromSocket(text) =>
+      
+    case FromSocket(text) => {
       logger.info("Got socket text: " + text + ", " + socket)
+
+      val b = ClientToServerMessage.newBuilder()
+      try {
+        parser.merge(text, b)
+        val proto = b.build()
+        println(proto)
+        println(Conversions.fromProto(proto.getSubscriptionRequest))
+
+        // TODO: keyed subscriptions from client, can cache params and retry when connection re-opens; move proto def to here?
+        // TODO: think about eventual websocket impl
+
+      } catch {
+        case ex: Throwable =>
+          logger.warn("Error parsing json: " + ex)
+      }
+
+    }
   }
 }
 
