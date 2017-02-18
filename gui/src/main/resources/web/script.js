@@ -16,7 +16,14 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-angular.module('edgeGui', [])
+
+angular.module('edgeGui', [ 'ngRoute' ])
+    .config(function($routeProvider, $locationProvider) {
+        $routeProvider
+            .when('/other', { templateUrl: "other.html" })
+            .when('/main', { templateUrl: "main.html" })
+            .otherwise('/main')
+    })
   .controller('edgeGuiController', function($scope, $http, $interval, $location) {
 
     var connectionIdle = true;

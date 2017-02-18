@@ -20,7 +20,11 @@
 body {
   padding-top: 50px;
 }
-.starter-template {
-  padding: 40px 15px;
-  text-align: center;
+
+
+.navbar-brand {
+    color: #8cc63e;
+    border-bottom-width: 6px;
+    border-bottom-color: #8cc63e;
+    border-bottom-style: solid;
 }

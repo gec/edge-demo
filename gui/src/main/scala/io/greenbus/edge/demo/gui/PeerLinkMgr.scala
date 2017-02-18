@@ -92,7 +92,7 @@ class PeerLink(socket: Socket) extends Actor with LazyLogging {
 
   def receive = {
     case DoInit =>
-      
+
     case FromSocket(text) => {
       logger.info("Got socket text: " + text + ", " + socket)
 
