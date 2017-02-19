@@ -17,65 +17,73 @@
  * the License.
  */
 
-angular.module('edgeGui', [ 'ngRoute' ])
-    .config(function($routeProvider, $locationProvider) {
-        $routeProvider
-            .when('/other', { templateUrl: "other.html" })
-            .when('/main', { templateUrl: "main.html" })
-            .otherwise('/main')
-    })
-  .controller('edgeGuiController', function($scope, $http, $interval, $location) {
+ var i = 0;
 
-    var connectionIdle = true;
 
-    doConnect();
+var connectionService = function(){
+    var seq = 0;
+    //var connectionIdle = true;
 
-    $interval(check, 3000);
+    var connectParams = null;
+    var socket = null;
+    var paramsMap = {}
+    var subsMap = {}
+
+    var nextSeq = function() {
+        var next = seq;
+        seq += 1;
+        return next;
+    }
+
+    //doConnect();
 
     function check() {
-        if (connectionIdle) {
+        if (connectParams != null && socket == null) {
             doConnect();
         }
     }
 
     function doConnect() {
 
-        var wsUri = $location.protocol() === 'https' ? 'wss' : 'ws';
-        wsUri += '://' + $location.host() + ':' + $location.port();
+        var wsUri = connectParams.protocol === 'https' ? 'wss' : 'ws';
+        wsUri += '://' + connectParams.host + ':' + connectParams.port;
         var ws = new WebSocket(wsUri + "/socket");
         connectionIdle = false;
 
         ws.onopen = function(){
             console.log("Socket has been opened!");
             console.log(ws);
+            socket = ws;
+            doOnOpen();
 
-            var obj = {
-                subscription_request : {
-                    content : {
-                        endpoint_set_prefix : [{
-                            part: [  ]
-
-                        }]
+            /*var obj = {
+                  subscriptions_added: {
+                    "0": {
+                      endpoint_set_prefix: [{
+                        "part": []
+                      }]
                     }
-                }
+                  }
             };
 
-            ws.send(JSON.stringify(obj))
+            ws.send(JSON.stringify(obj))*/
         };
 
         ws.onmessage = function(message) {
             console.log(message);
-            $scope.example = message.data;
 
             var json = JSON.parse(message.data);
             console.log(json);
 
-            $scope.message = json;
-
-            /*for (var key in json) {
-                $scope[key] = json[key];
-            }*/
-            $scope.$digest();
+            var subs = json['subscriptionNotification'];
+            if (subs != null) {
+                for (var key in subs) {
+                    var subObj = paramsMap[key];
+                    if (subObj != null) {
+                        subObj.callback(subs[key]);
+                    }
+                }
+            }
         };
 
         ws.onerror = function(err) {
@@ -84,8 +92,121 @@ angular.module('edgeGui', [ 'ngRoute' ])
         };
         ws.onclose = function(ev) {
           console.log("onclose: " + ev);
-          connectionIdle = true;
+          socket = null;
         };
+    }
+
+    var doOnOpen = function() {
+        for (var key in paramsMap) {
+            var entry = paramsMap[key]
+            doSubscription(key, entry.params, entry.callback);
+        }
+    }
+
+    var doSubscription = function(key, params, callback) {
+        var subs = {};
+        subs[key] = params;
+        var msg = { subscriptions_added : subs }
+        socket.send(JSON.stringify(msg))
+    }
+
+    var onRemove = function(key) {
+        if (socket != null) {
+            var msg = {
+                subscriptions_removed: [ key ]
+            }
+            ws.send(JSON.stringify(msg))
+        }
+        delete paramsMap[key];
+    }
+
+    return {
+        start: function(connParams) {
+            connectParams = connParams;
+            connectParams.interval(check, 3000);
+            check();
+        },
+        subscribe: function(par, cb) {
+            var key = nextSeq();
+            paramsMap[key] = { params: par, callback: cb };
+            if (socket != null) {
+                doSubscription(key, par, cb)
+            }
+
+            return {
+                remove: function() {
+                    onRemove(key);
+                }
+            }
+        }
+    };
+}();
+
+angular.module('edgeGui', [ 'ngRoute' ])
+    .config(function($routeProvider, $locationProvider) {
+        $routeProvider
+            .when('/other', { templateUrl: "other.html", controller: 'edgeOtherController' })
+            .when('/main', { templateUrl: "main.html", controller: 'edgeMainController'  })
+            .otherwise('/main')
+    })
+  .controller('edgeMainController', function($scope, $http, $interval, $location) {
+
+    var me = i;
+    i += 1;
+    console.log("main controller: " + me);
+
+    $scope.$on('$destroy', function() {
+        console.log("main destroyed: " + me)
+    });
+
+  })
+  .controller('edgeOtherController', function($scope, $http, $interval, $location) {
+    console.log("other controller");
+  })
+  .controller('edgeGuiController', function($scope, $http, $interval, $location) {
+    console.log("gui controller")
+
+
+    $scope.manifest = []
+
+    connectionService.start({
+        protocol: $location.protocol(),
+         host: $location.host(),
+         port: $location.port(),
+         interval: $interval
+    });
+
+    var params = {
+               endpoint_set_prefix: [{
+                 "part": []
+               }]
+             };
+
+    var sub = connectionService.subscribe(params, function(msg) {
+        console.log("Got subscription notification: ");
+        console.log(msg);
+
+        if (msg.endpointSetNotification != null) {
+            for (var i in msg.endpointSetNotification) {
+                var notification = msg.endpointSetNotification[i];
+                console.log(notification);
+                if (notification.snapshot != null) {
+                    onSetSnapshot(notification.snapshot);
+                } else {
+
+                }
+            }
+        }
+
+        $scope.$digest();
+    });
+
+    var onSetSnapshot = function(snap) {
+        console.log("on set snapshot");
+        var arr = []
+        if (snap.entries != null) {
+           $scope.manifest = snap.entries;
+        }
     }
 
 });

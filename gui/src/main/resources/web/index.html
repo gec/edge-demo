@@ -30,20 +30,19 @@
             src="https://code.angularjs.org/1.5.6/angular.min.js"></script>-->
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="style.css"/>
-    <script src="js/angular.min.js"></script>
-    <script src="js/angular-route.min.js"></script>
+    <!--<script src="js/angular.min.js"></script>
+    <script src="js/angular-route.min.js"></script>-->
 
-    <!--<script data-require="angular.js@1.5.6" data-semver="1.5.6"
+    <script data-require="angular.js@1.5.6" data-semver="1.5.6"
             src="https://code.angularjs.org/1.5.6/angular.js"></script>
     <script data-require="angular.js@1.5.6" data-semver="1.5.6"
-            src="https://code.angularjs.org/1.5.6/angular-route.js"></script>-->
+            src="https://code.angularjs.org/1.5.6/angular-route.js"></script>
 
     <script src="script.js"></script>
 </head>
 
 <!--<body style="background-color: #bfe2ff">-->
-<body style="">
-<div class="container" ng-controller="edgeGuiController">
+<body ng-controller="edgeGuiController">
 
 
     <nav class="navbar navbar-inverse navbar-fixed-top">
@@ -67,19 +66,52 @@
         </div>
     </nav>
 
+
     <div class="container">
 
-        <div>
-            <h1>Work in progress...</h1>
-            <p>{{message}}</p>
+        <div class="row">
+            <div class="col-md-2 sidebar">
+                <ul class="nav nav-sidebar">
+                    <li class="active"><a href="#">Overview <span class="sr-only">(current)</span></a></li>
+                    <li><a href="#">Reports</a></li>
+                    <li><a href="#">Analytics</a></li>
+                    <li><a href="#">Export</a></li>
+                </ul>
+            </div>
+            <div class="col-md-10">
+                <h1 class="page-header">Summary</h1>
+
+                <div>
+                    <p>{{manifest}}</p>
+                    <p><a href="#/main/">main</a></p>
+                    <p><a href="#/other/">other</a></p>
+                </div>
+
+                <div ng-view></div>
+            </div>
+           <!-- <div class="col-sm-3 col-md-2 sidebar">
+                <ul class="nav nav-sidebar">
+                    <li class="active"><a href="#">Overview <span class="sr-only">(current)</span></a></li>
+                    <li><a href="#">Reports</a></li>
+                    <li><a href="#">Analytics</a></li>
+                    <li><a href="#">Export</a></li>
+                </ul>
+            </div>
+            <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+                <h1 class="page-header">Dashboard</h1>
+
+                <div>
+                    <h1>Work in progress...</h1>
+                    <p>{{manifest}}</p>
+                    <p><a href="#/main/">main</a></p>
+                    <p><a href="#/other/">other</a></p>
+                </div>
+
+                <div ng-view></div>
+            </div>-->
         </div>
-
-        <div ng-view></div>
-
     </div>
 
-</div>
-<!-- end container -->
 </body>
 
 </html>

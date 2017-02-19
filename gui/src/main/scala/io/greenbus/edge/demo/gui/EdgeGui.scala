@@ -22,8 +22,10 @@ import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
+import io.greenbus.edge.amqp.AmqpService
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object EdgeGui {
 
@@ -35,7 +37,11 @@ object EdgeGui {
     val akkaConfig = slf4jConfig.withFallback(rootConfig)
     val system = ActorSystem("brokerTest", akkaConfig)
 
+    val service = AmqpService.build()
+
     val linkMgr = system.actorOf(PeerLinkMgr.props)
+
+    PeerLinkMgr.connect(service, "127.0.0.1", 50001).foreach(c => linkMgr ! PeerLinkMgr.Connected(c))
 
     val mgr = new GuiSocketMgr(linkMgr)
     globalSocketMgr.set(mgr)
