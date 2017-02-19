@@ -20,9 +20,9 @@ package io.greenbus.edge.demo.sim
 
 import java.util.UUID
 
-import akka.actor.{Actor, Props}
+import akka.actor.{ Actor, Props }
 import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge.{CallMarshaller, PersistenceSessionId}
+import io.greenbus.edge.{ CallMarshaller, PersistenceSessionId }
 import io.greenbus.edge.client.EdgeConnection
 
 import scala.concurrent.duration._
@@ -63,7 +63,6 @@ class SimulatorActor extends Actor with CallMarshalActor with LazyLogging {
     }
     case MarshalledCall(f) => f()
   }
-
 
   protected def scheduleMsg(timeMs: Long, msg: AnyRef) {
     import context.dispatcher

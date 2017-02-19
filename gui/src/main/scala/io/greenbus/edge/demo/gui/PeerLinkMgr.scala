@@ -18,16 +18,16 @@
  */
 package io.greenbus.edge.demo.gui
 
-import akka.actor.{Actor, ActorRef, PoisonPill, Props}
+import akka.actor.{ Actor, ActorRef, PoisonPill, Props }
 import com.google.protobuf.util.JsonFormat
 import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge.{CallMarshaller, ClientSubscriptionParams, Path}
+import io.greenbus.edge.{ CallMarshaller, ClientSubscriptionParams, Path }
 import io.greenbus.edge.amqp.AmqpService
-import io.greenbus.edge.client.{EdgeConnection, EdgeConnectionImpl, EdgeSubscription}
-import io.greenbus.edge.proto.{ClientToServerMessage, ServerToClientMessage}
+import io.greenbus.edge.client.{ EdgeConnection, EdgeConnectionImpl, EdgeSubscription }
+import io.greenbus.edge.proto.{ ClientToServerMessage, ServerToClientMessage }
 import io.greenbus.edge.proto.convert.Conversions
 
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration._
 import scala.collection.JavaConversions._
 
@@ -62,7 +62,7 @@ class PeerLinkMgr extends Actor with LazyLogging {
     case Connected(edgeConnection) => {
       edgeOpt = Some(edgeConnection)
       linkMap.foreach {
-        case (_ , ref) => ref ! PeerLink.Connected(edgeConnection)
+        case (_, ref) => ref ! PeerLink.Connected(edgeConnection)
       }
     }
     case SocketConnected(sock) => {
@@ -96,7 +96,7 @@ class PeerSubMgr(events: CallMarshaller, socket: Socket, printer: JsonFormat.Pri
       events.marshal {
         if (paramsMap.get(key).contains(params)) {
           subsMap += (key -> sub)
-          sub.notifications.bind( not =>
+          sub.notifications.bind(not =>
             try {
               val msg = ServerToClientMessage.newBuilder()
                 .putSubscriptionNotification(key, Conversions.toProto(not))
@@ -107,8 +107,7 @@ class PeerSubMgr(events: CallMarshaller, socket: Socket, printer: JsonFormat.Pri
             } catch {
               case ex: Throwable =>
                 logger.error("Problem writing proto message: " + ex)
-            }
-          )
+            })
 
         } else {
           sub.close()
@@ -207,7 +206,6 @@ class PeerLink(socket: Socket) extends Actor with CallMarshalActor with LazyLogg
     subMgr.close()
   }
 }
-
 
 trait CallMarshalActor {
   self: Actor =>

@@ -37,11 +37,9 @@ class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord) extends LazyLo
   private val pv1 = new PvSim(PvParams.basic, PvSim.PvState(1.0, fault = false))
   publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pv1, "PV1", EndpointBuilders.buildPv())
 
-  private val ess1 = {
-    val params = EssParams.basic
-    new EssSim(params, EssSim.EssState(EssSim.Constant, 0.5 * params.capacity, 0.0, 0.0, false))
-  }
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, ess1, "ESS1", EndpointBuilders.buildEss())
+  private val essParams = EssParams.basic
+  private val ess1 = new EssSim(essParams, EssSim.EssState(EssSim.Constant, 0.5 * essParams.capacity, 0.0, 0.0, false))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, ess1, "ESS1", EndpointBuilders.buildEss(essParams))
 
   private val chp1 = new ChpSim(ChpParams.basic, ChpSim.ChpState(0.0, 0.0, false))
   publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, chp1, "CHP1", EndpointBuilders.buildChp())

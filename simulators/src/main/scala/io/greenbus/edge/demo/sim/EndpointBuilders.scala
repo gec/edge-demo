@@ -20,6 +20,7 @@ package io.greenbus.edge.demo.sim
 
 import io.greenbus.edge._
 import io.greenbus.edge.client._
+import play.api.libs.json.Json
 
 object EndpointBuilders {
 
@@ -51,7 +52,7 @@ object EndpointBuilders {
     val latestKvs = Map.empty[Path, LatestKeyValueEntry]
 
     val timeSeries = Map(
-      LoadMapping.power -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
+      LoadMapping.power -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
       LoadMapping.voltage -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("V"))),
       LoadMapping.current -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("A"))),
       LoadMapping.kvar -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kVAR"))))
@@ -69,10 +70,10 @@ object EndpointBuilders {
     val latestKvs = Map.empty[Path, LatestKeyValueEntry]
 
     val timeSeries = Map(
-      ChpMapping.power -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
+      ChpMapping.power -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
       ChpMapping.powerCapacity -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
-      ChpMapping.powerTarget -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueString(outputTargetType)), meta = Map(Path("unit") -> ValueString("kW"))),
-      ChpMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueString(faultType))))
+      ChpMapping.powerTarget -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputTargetType)), meta = Map(Path("unit") -> ValueString("kW"))),
+      ChpMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType))))
 
     val outputs = Map(
       ChpMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map())),
@@ -81,25 +82,26 @@ object EndpointBuilders {
     ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
   }
 
-  def buildEss(): ClientEndpointPublisherDesc = {
+  def buildEss(params: EssParams): ClientEndpointPublisherDesc = {
     val now = System.currentTimeMillis()
 
-    val indexes = Map.empty[Path, IndexableValue]
-    val meta = Map.empty[Path, Value]
+    val indexes = Map(Path("gridDeviceType") -> ValueSimpleString("ess"))
+    val meta = Map(Path("params") -> ValueString(Json.toJson(params).toString())) //Map.empty[Path, Value]
+
     val latestKvs = Map.empty[Path, LatestKeyValueEntry]
 
     val timeSeries = Map(
-      EssMapping.percentSoc -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueString("percentSoc")), meta = Map(Path("unit") -> ValueString("%"))),
+      EssMapping.percentSoc -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("percentSoc")), meta = Map(Path("unit") -> ValueString("%"))),
       EssMapping.mode -> tsEnum(0, now),
-      EssMapping.socMax -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueString("socMax")), meta = Map(Path("unit") -> ValueString("%"))),
-      EssMapping.socMin -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueString("socMin")), meta = Map(Path("unit") -> ValueString("%"))),
-      EssMapping.chargeDischargeRate -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
+      EssMapping.socMax -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("socMax")), meta = Map(Path("unit") -> ValueString("%"))),
+      EssMapping.socMin -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("socMin")), meta = Map(Path("unit") -> ValueString("%"))),
+      EssMapping.chargeDischargeRate -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
       EssMapping.chargeRateMax -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
       EssMapping.dischargeRateMax -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
       EssMapping.capacity -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kWh"))),
       EssMapping.efficiency -> tsDouble(0.0, now),
-      EssMapping.chargeRateTarget -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueString(outputTargetType)), meta = Map(Path("unit") -> ValueString("kW"))),
-      EssMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueString(faultType))))
+      EssMapping.chargeRateTarget -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputTargetType)), meta = Map(Path("unit") -> ValueString("kW"))),
+      EssMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType))))
 
     val outputs = Map(
       PvMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map())),
@@ -115,24 +117,10 @@ object EndpointBuilders {
     val meta = Map.empty[Path, Value]
     val latestKvs = Map.empty[Path, LatestKeyValueEntry]
 
-
     val timeSeries = Map(
-      PvMapping.pvOutputPower -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
+      PvMapping.pvOutputPower -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
       PvMapping.pvCapacity -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
-      PvMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueString(faultType))))
-
-    /*val timeSeries = Map(
-      PvMapping.pvOutputPower -> TimeSeriesValueEntry(
-        TimeSeriesSample(System.currentTimeMillis(), ValueDouble(0.0)),
-        MetadataDesc(
-          Map(Path("gridValueType") -> ValueString("outputPower")),
-          Map())),
-      PvMapping.pvCapacity -> TimeSeriesValueEntry(
-        TimeSeriesSample(System.currentTimeMillis(), ValueDouble(0.0)),
-        MetadataDesc(
-          Map(),
-          Map())),
-      PvMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueString(faultType))))*/
+      PvMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType))))
 
     val outputs = Map(
       PvMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map())),

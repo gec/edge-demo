@@ -62,6 +62,10 @@ function sampleValueToSimpleValue(v) {
 function endpointIdForName(name) {
     return { namedId: { name: name } };
 }
+function endpointIdToString(id) {
+    return id.namedId.name;
+}
+
 function pathToString(path) {
     var i = 0;
     var result = "";
@@ -185,6 +189,41 @@ var connectionService = function(){
     };
 }();
 
+var endpointInfo = function(id, desc) {
+
+    var indexes = {}
+    var metadata = {}
+
+    if (desc.indexes != null) {
+        desc.indexes.forEach(function(kv) {
+            indexes[pathToString(kv.key)] = sampleValueToSimpleValue(kv.value);
+        });
+    }
+    if (desc.metadata != null) {
+        desc.metadata.forEach(function(kv) {
+            metadata[pathToString(kv.key)] = valueToJsValue(kv.value);
+        });
+    }
+
+    var dataCount = 0;
+    var outputCount = 0;
+    if (desc.dataKeySet != null) {
+        dataCount = desc.dataKeySet.length;
+    }
+    if (desc.outputKeySet != null) {
+        outputCount = desc.outputKeySet.length;
+    }
+
+    return {
+        id: endpointIdToString(id),
+        origEndpointId: id,
+        indexes: indexes,
+        metadata: metadata,
+        dataCount: dataCount,
+        outputCount: outputCount
+    };
+};
+
 angular.module('edgeGui', [ 'ngRoute' ])
     .config(function($routeProvider, $locationProvider) {
         $routeProvider
@@ -208,7 +247,16 @@ angular.module('edgeGui', [ 'ngRoute' ])
     $scope.name = name;
     $scope.dataTable = [];
     $scope.outputTable = [];
-    //var timeSeriesMap = {}
+
+    $scope.endpointInfo = null;
+
+    $('#metadataModal').on('show.bs.modal', function (event) {
+        console.log("saw modal event");
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        $scope.modalKey = button.data('key');
+        $scope.$digest();
+    });
+
     var dataMap = {};
     var outputMap = {};
 
@@ -233,6 +281,9 @@ angular.module('edgeGui', [ 'ngRoute' ])
             var endId = descNot.endpointId
             var descriptor = descNot.endpointDescriptor;
             if (descriptor != null && endId != null) {
+
+                $scope.endpointInfo = endpointInfo(endId, descriptor);
+
                 if (descriptor.dataKeySet != null) {
                     descriptor.dataKeySet.forEach(function(elem) {
 
@@ -270,8 +321,8 @@ angular.module('edgeGui', [ 'ngRoute' ])
                     });
                 }
 
-                $scope.dataKeySet = descriptor.dataKeySet;
-                $scope.outputKeySet = descriptor.outputKeySet;
+                //$scope.dataKeySet = descriptor.dataKeySet;
+                //$scope.outputKeySet = descriptor.outputKeySet;
             }
 
             dataKeys = dataKs;
@@ -285,8 +336,8 @@ angular.module('edgeGui', [ 'ngRoute' ])
     });
 
     var updateTables = function() {
-        console.log("DATA MAP: ");
-        console.log(dataMap);
+        //console.log("DATA MAP: ");
+        //console.log(dataMap);
 
         var table = []
         for (var key in dataMap) {
@@ -303,7 +354,6 @@ angular.module('edgeGui', [ 'ngRoute' ])
                         if (values != null) {
                             values.forEach(function (elem) {
                                 v = sampleValueToSimpleValue(elem.sample.value);
-                                console.log(elem.sample.time);
                                 t = elem.sample.time;
                             });
                         }
@@ -314,7 +364,6 @@ angular.module('edgeGui', [ 'ngRoute' ])
                         if (values != null) {
                             values.forEach(function (elem) {
                                 v = sampleValueToSimpleValue(elem.sample.value);
-                                console.log(elem.sample.time);
                                 t = elem.sample.time;
                             });
                         }
@@ -347,8 +396,8 @@ angular.module('edgeGui', [ 'ngRoute' ])
         };
         console.log(keyParams);
         keySub = connectionService.subscribe(keyParams, function(msg) {
-            console.log("got data: ");
-            console.log(msg);
+            //console.log("got data: ");
+            //console.log(msg);
 
             var dataNotification = msg.dataNotification;
             if (dataNotification != null) {
