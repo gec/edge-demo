@@ -20,15 +20,18 @@ package io.greenbus.edge.demo.sim
 
 import java.util.UUID
 
-import akka.actor.{ Actor, Props }
+import akka.actor.{Actor, Props}
 import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge.{ CallMarshaller, PersistenceSessionId }
+import io.greenbus.edge.{CallMarshaller, PersistenceSessionId}
 import io.greenbus.edge.client.EdgeConnection
+
+import scala.concurrent.duration._
 
 object SimulatorActor {
 
   case object DoSetup
   case class Connected(conn: EdgeConnection)
+  case object Tick
 
   def props(): Props = {
     Props[SimulatorActor]()
@@ -47,12 +50,27 @@ class SimulatorActor extends Actor with CallMarshalActor with LazyLogging {
   def receive = {
     case DoSetup => {
       mgr.setup()
+      mgr.tick()
+      scheduleMsg(1000, Tick)
+    }
+    case Tick => {
+      mgr.tick()
+      scheduleMsg(1000, Tick)
     }
     case Connected(conn) => {
       logger.info("Got edge connection")
       val futs = publishers.map { case (id, pub) => conn.connectPublisher(id, sessionId, pub) }
     }
     case MarshalledCall(f) => f()
+  }
+
+
+  protected def scheduleMsg(timeMs: Long, msg: AnyRef) {
+    import context.dispatcher
+    context.system.scheduler.scheduleOnce(
+      Duration(timeMs, MILLISECONDS),
+      self,
+      msg)
   }
 }
 

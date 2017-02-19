@@ -90,13 +90,6 @@ class EdgeSocket extends WebSocketAdapter with LazyLogging {
     val sock = new SessionSocketImpl(sess)
     socketOpt = Some(sock)
     mgr.connected(sock)
-
-    logger.info("Got web socket connect " + this)
-    try {
-      sess.getRemote.sendString(""" {"blah" : "meh"} """)
-    } catch {
-      case ex: Throwable => logger.warn("Problem writing to socket: " + ex)
-    }
     super.onWebSocketConnect(sess)
 
   }

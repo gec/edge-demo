@@ -102,7 +102,8 @@ class PeerSubMgr(events: CallMarshaller, socket: Socket, printer: JsonFormat.Pri
                 .putSubscriptionNotification(key, Conversions.toProto(not))
                 .build()
 
-              socket.send(printer.print(msg))
+              val json = printer.print(msg)
+              socket.send(json)
             } catch {
               case ex: Throwable =>
                 logger.error("Problem writing proto message: " + ex)
@@ -139,6 +140,10 @@ class PeerSubMgr(events: CallMarshaller, socket: Socket, printer: JsonFormat.Pri
 
   def disconnected(): Unit = {
     connectionOpt = None
+    subsMap.values.foreach(_.close())
+  }
+
+  def close(): Unit = {
     subsMap.values.foreach(_.close())
   }
 
@@ -190,18 +195,16 @@ class PeerLink(socket: Socket) extends Actor with CallMarshalActor with LazyLogg
             }
         }
 
-        //println(Conversions.fromProto(proto.getSubscriptionRequest))
-
-        // TODO: keyed subscriptions from client, can cache params and retry when connection re-opens; move proto def to here?
-        // TODO: think about eventual websocket impl
-
       } catch {
         case ex: Throwable =>
           logger.warn("Error parsing json: " + ex)
       }
-
     }
     case MarshalledCall(f) => f()
+  }
+
+  override def postStop(): Unit = {
+    subMgr.close()
   }
 }
 

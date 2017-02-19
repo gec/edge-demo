@@ -83,15 +83,21 @@ class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord) extends LazyLo
     val now = System.currentTimeMillis()
     val lineState = simulator.tick(now)
 
+    var publishersToFlush = Set.empty[EndpointPublisher]
+
     publisherPairs.foreach { pair =>
       val updates = pair.simulator.updates(lineState, now)
       updates.foreach {
         case update: TimeSeriesUpdate =>
           pair.publisher.timeSeriesStreams.get(update.path) match {
             case None => logger.warn("Path for update unrecognized: " + update.path)
-            case Some(sink) => sink.push(TimeSeriesSample(now, update.v))
+            case Some(sink) =>
+              sink.push(TimeSeriesSample(now, update.v))
+              publishersToFlush += pair.publisher
           }
       }
     }
+
+    publishersToFlush.foreach(_.flush())
   }
 }

@@ -199,22 +199,26 @@ angular.module('edgeGui', [ 'ngRoute' ])
             var endId = descNot.endpointId
             var descriptor = descNot.endpointDescriptor;
             if (descriptor != null && endId != null) {
-                descriptor.dataKeySet.forEach(function(elem) {
-                    var endPath = { endpointId: endId, key: elem.key }
-                    dataKs.push(endPath)
+                if (descriptor.dataKeySet != null) {
+                    descriptor.dataKeySet.forEach(function(elem) {
+                        var endPath = { endpointId: endId, key: elem.key }
+                        dataKs.push(endPath)
 
-                    var mapEntry = { key: elem.key, desc: elem.value }
-                    var pathStr = pathToString(elem.key);
-                    var existing = dataMap[pathStr];
-                    if (existing != null && existing.value != null) {
-                        mapEntry.value = existing.value
-                    }
-                    dataMap[pathStr] = mapEntry;
-                });
-                descriptor.outputKeySet.forEach(function(elem) {
-                    var endPath = { endpointId: endId, key: elem.key }
-                    outputKs.push(endPath)
-                });
+                        var mapEntry = { key: elem.key, desc: elem.value }
+                        var pathStr = pathToString(elem.key);
+                        var existing = dataMap[pathStr];
+                        if (existing != null && existing.value != null) {
+                            mapEntry.value = existing.value
+                        }
+                        dataMap[pathStr] = mapEntry;
+                    });
+                }
+                if (descriptor.outputKeySet != null) {
+                    descriptor.outputKeySet.forEach(function(elem) {
+                        var endPath = { endpointId: endId, key: elem.key }
+                        outputKs.push(endPath)
+                    });
+                }
 
                 $scope.dataKeySet = descriptor.dataKeySet;
                 $scope.outputKeySet = descriptor.outputKeySet;
@@ -241,20 +245,37 @@ angular.module('edgeGui', [ 'ngRoute' ])
             var v = null;
             var t = null;
 
-            if (entry.value != null && entry.value.state != null && entry.value.state.timeSeriesState != null) {
-                var values = entry.value.state.timeSeriesState.values;
-                if (values != null) {
-                    values.forEach(function (elem) {
-                        v = sampleValueToSimpleValue(elem.sample.value);
-                        console.log(elem.sample.time);
-                        t = elem.sample.time;
-                    });
+            if (entry.value != null) {
+                if (entry.value.state != null) {
+                    if (entry.value.state.timeSeriesState != null) {
+                        var values = entry.value.state.timeSeriesState.values;
+                        if (values != null) {
+                            values.forEach(function (elem) {
+                                v = sampleValueToSimpleValue(elem.sample.value);
+                                console.log(elem.sample.time);
+                                t = elem.sample.time;
+                            });
+                        }
+                    }
+                } else if (entry.value.update != null) {
+                    if (entry.value.update.timeSeriesUpdate != null) {
+                        var values = entry.value.update.timeSeriesUpdate.values;
+                        if (values != null) {
+                            values.forEach(function (elem) {
+                                v = sampleValueToSimpleValue(elem.sample.value);
+                                console.log(elem.sample.time);
+                                t = elem.sample.time;
+                            });
+                        }
+                    }
                 }
             }
 
-            var date = new Date(parseInt(t));
+            if (v != null && t != null) {
+                var date = new Date(parseInt(t));
 
-            table.push({name: name, value: v, time: date})
+                table.push({name: name, value: v, time: date})
+            }
         }
 
         $scope.dataTable = table;
