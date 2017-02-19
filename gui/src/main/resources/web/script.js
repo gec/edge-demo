@@ -17,8 +17,29 @@
  * the License.
  */
 
- var i = 0;
+var i = 0;
 
+function sampleValueToSimpleValue(v) {
+    for (var key in v) {
+        return v[key];
+    }
+}
+
+function endpointIdForName(name) {
+    return { namedId: { name: name } };
+}
+function pathToString(path) {
+    var i = 0;
+    var result = "";
+
+    path.part.forEach(function(elem) {
+        if (i != 0) {
+            result = result + "/";
+        }
+        result = result + elem;
+    })
+    return result;
+}
 
 var connectionService = function(){
     var seq = 0;
@@ -55,25 +76,13 @@ var connectionService = function(){
             console.log(ws);
             socket = ws;
             doOnOpen();
-
-            /*var obj = {
-                  subscriptions_added: {
-                    "0": {
-                      endpoint_set_prefix: [{
-                        "part": []
-                      }]
-                    }
-                  }
-            };
-
-            ws.send(JSON.stringify(obj))*/
         };
 
         ws.onmessage = function(message) {
-            console.log(message);
+            //console.log(message);
 
             var json = JSON.parse(message.data);
-            console.log(json);
+            //console.log(json);
 
             var subs = json['subscriptionNotification'];
             if (subs != null) {
@@ -115,7 +124,7 @@ var connectionService = function(){
             var msg = {
                 subscriptions_removed: [ key ]
             }
-            ws.send(JSON.stringify(msg))
+            socket.send(JSON.stringify(msg))
         }
         delete paramsMap[key];
     }
@@ -145,23 +154,148 @@ var connectionService = function(){
 angular.module('edgeGui', [ 'ngRoute' ])
     .config(function($routeProvider, $locationProvider) {
         $routeProvider
-            .when('/other', { templateUrl: "other.html", controller: 'edgeOtherController' })
+            .when('/endpoint/:name', { templateUrl: "endpoint.html", controller: 'edgeEndpointController' })
             .when('/main', { templateUrl: "main.html", controller: 'edgeMainController'  })
             .otherwise('/main')
     })
   .controller('edgeMainController', function($scope, $http, $interval, $location) {
-
-    var me = i;
-    i += 1;
-    console.log("main controller: " + me);
+    console.log("main controller");
 
     $scope.$on('$destroy', function() {
         console.log("main destroyed: " + me)
     });
 
   })
-  .controller('edgeOtherController', function($scope, $http, $interval, $location) {
-    console.log("other controller");
+  .controller('edgeEndpointController', function($scope, $routeParams, $http, $interval, $location) {
+    console.log("endpoint controller for " + $routeParams);
+    console.log($routeParams);
+
+    var name = $routeParams.name;
+    $scope.name = name;
+    $scope.dataTable = [];
+    $scope.outputTable = [];
+    //var timeSeriesMap = {}
+    var dataMap = {};
+    var outputMap = {};
+
+    var keySub = null;
+
+    var infoParams = {
+        infoSubscription: [ endpointIdForName(name) ]
+    }
+    var infoSub = connectionService.subscribe(infoParams, function(msg) {
+        console.log("got info: ");
+        console.log(msg);
+
+        //$scope.dataKeySet = [];
+        //$scope.outputKeySet = [];
+        var dataKeys = [];
+        var outputKeys = [];
+
+        msg.descriptorNotification.forEach(function(descNot) {
+            console.log(descNot)
+            var dataKs = [];
+            var outputKs = [];
+            var endId = descNot.endpointId
+            var descriptor = descNot.endpointDescriptor;
+            if (descriptor != null && endId != null) {
+                descriptor.dataKeySet.forEach(function(elem) {
+                    var endPath = { endpointId: endId, key: elem.key }
+                    dataKs.push(endPath)
+
+                    var mapEntry = { key: elem.key, desc: elem.value }
+                    var pathStr = pathToString(elem.key);
+                    var existing = dataMap[pathStr];
+                    if (existing != null && existing.value != null) {
+                        mapEntry.value = existing.value
+                    }
+                    dataMap[pathStr] = mapEntry;
+                });
+                descriptor.outputKeySet.forEach(function(elem) {
+                    var endPath = { endpointId: endId, key: elem.key }
+                    outputKs.push(endPath)
+                });
+
+                $scope.dataKeySet = descriptor.dataKeySet;
+                $scope.outputKeySet = descriptor.outputKeySet;
+            }
+
+            dataKeys = dataKs;
+            outputKeys = outputKs;
+        });
+
+        updateTables();
+        updateKeySub(dataKeys, outputKeys);
+
+        $scope.$digest();
+    });
+
+    var updateTables = function() {
+        console.log("DATA MAP: ");
+        console.log(dataMap);
+
+        var table = []
+        for (var key in dataMap) {
+            var entry = dataMap[key];
+            var name = key;
+            var v = null;
+            var t = null;
+
+            if (entry.value != null && entry.value.state != null && entry.value.state.timeSeriesState != null) {
+                var values = entry.value.state.timeSeriesState.values;
+                if (values != null) {
+                    values.forEach(function (elem) {
+                        v = sampleValueToSimpleValue(elem.sample.value);
+                        console.log(elem.sample.time);
+                        t = elem.sample.time;
+                    });
+                }
+            }
+
+            var date = new Date(parseInt(t));
+
+            table.push({name: name, value: v, time: date})
+        }
+
+        $scope.dataTable = table;
+    }
+
+    var updateKeySub = function(dataKeys, outputKeys) {
+        if (keySub != null) {
+            keySub.remove();
+        }
+
+        var keyParams = {
+            dataSubscription: dataKeys,
+            outputSubscription: outputKeys
+        };
+        console.log(keyParams);
+        keySub = connectionService.subscribe(keyParams, function(msg) {
+            console.log("got data: ");
+            console.log(msg);
+
+            var dataNotification = msg.dataNotification;
+            if (dataNotification != null) {
+                dataNotification.forEach(function(elem) {
+                    var pathStr = pathToString(elem.key.key);
+                    var mapEntry = dataMap[pathStr];
+                    mapEntry.value = elem.value;
+                });
+            }
+
+            updateTables();
+        });
+    };
+
+
+    $scope.$on('$destroy', function() {
+        console.log("endpoint destroyed: " + name)
+        infoSub.remove();
+        if (keySub != null) {
+            keySub.remove();
+        }
+    });
+
   })
   .controller('edgeGuiController', function($scope, $http, $interval, $location) {
     console.log("gui controller")

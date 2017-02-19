@@ -1,0 +1,29 @@
+
+
+<h1 class="page-header">{{name}}</h1>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Value</th>
+            <th>Unit</th>
+            <th>Time</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="line in dataTable">
+            <td>{{line.name}}</td>
+            <td>{{line.value}}</td>
+            <td></td>
+            <td>{{line.time | date:'HH:mm:ss.sss yyyy-MM-dd'}}</td>
+        </tr>
+        <!--<tr>
+            <td>Key</td>
+            <td>Value</td>
+            <td>Time</td>
+        </tr>-->
+        </tbody>
+    </table>
+</div>
