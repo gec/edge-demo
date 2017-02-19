@@ -19,6 +19,40 @@
 
 var i = 0;
 
+function valueToJsValue(v) {
+
+    for (var key in v) {
+        if (key === 'uuidValue') {
+            return v[key]; // NOTE: for now, just take object
+
+        } else if (key === 'stringValue') {
+            if (v[key]['mimeType'] != null) {
+                return v[key]
+            } else {
+                return v[key].value;
+            }
+
+        } else if (key === 'bytesValue') {
+            return v[key]; // NOTE: for now, just take object
+
+        } else if (key === 'arrayValue') {
+            return v[key].element.map(function(elem) {
+                valueToJsValue(elem)
+            });
+
+        } else if (key === 'objectValue') {
+            return v[key].fields;
+
+        } else {
+            return v[key];
+        }
+    }
+
+    if (v['floatValue'] != null) {
+        v.floatValue
+    }
+}
+
 function sampleValueToSimpleValue(v) {
     for (var key in v) {
         return v[key];
@@ -201,10 +235,26 @@ angular.module('edgeGui', [ 'ngRoute' ])
             if (descriptor != null && endId != null) {
                 if (descriptor.dataKeySet != null) {
                     descriptor.dataKeySet.forEach(function(elem) {
+
+                        var indexes = {}
+                        var metadata = {}
+
+                        if (elem.value.indexes != null) {
+                            elem.value.indexes.forEach(function(kv) {
+                                indexes[pathToString(kv.key)] = sampleValueToSimpleValue(kv.value);
+                            });
+                        }
+                        if (elem.value.metadata != null) {
+                            elem.value.metadata.forEach(function(kv) {
+                                console.log(elem.metadata);
+                                metadata[pathToString(kv.key)] = valueToJsValue(kv.value);
+                            });
+                        }
+
                         var endPath = { endpointId: endId, key: elem.key }
                         dataKs.push(endPath)
 
-                        var mapEntry = { key: elem.key, desc: elem.value }
+                        var mapEntry = { key: elem.key, desc: elem.value, indexes: indexes, metadata: metadata }
                         var pathStr = pathToString(elem.key);
                         var existing = dataMap[pathStr];
                         if (existing != null && existing.value != null) {
@@ -240,6 +290,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
         var table = []
         for (var key in dataMap) {
+            console.log
             var entry = dataMap[key];
             var name = key;
             var v = null;
@@ -273,8 +324,12 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
             if (v != null && t != null) {
                 var date = new Date(parseInt(t));
+                var unit = "";
+                if (entry.metadata['unit'] != null) {
+                    unit = entry.metadata['unit'];
+                }
 
-                table.push({name: name, value: v, time: date})
+                table.push({name: name, value: v, unit: unit, time: date})
             }
         }
 

@@ -7,7 +7,7 @@
         <thead>
         <tr>
             <th>Name</th>
-            <th>Value</th>
+            <th style="text-align: right">Value</th>
             <th>Unit</th>
             <th>Time</th>
         </tr>
@@ -15,8 +15,8 @@
         <tbody>
         <tr ng-repeat="line in dataTable">
             <td>{{line.name}}</td>
-            <td>{{line.value}}</td>
-            <td></td>
+            <td style="text-align: right">{{line.value | number:2}}</td>
+            <td>{{line.unit}}</td>
             <td>{{line.time | date:'HH:mm:ss.sss yyyy-MM-dd'}}</td>
         </tr>
         <!--<tr>
