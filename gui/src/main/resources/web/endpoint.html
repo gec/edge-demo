@@ -45,9 +45,56 @@
 
 
 <div>
-    <h3>Data</h3>
+    <div class="modal fade" id="keyValueObjectModal" tabindex="-1" role="dialog" aria-labelledby="keyValueObjectModalLabel">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="keyValueObjectModalLabel">{{endpointInfo.id}} / <strong>{{modalKey}}</strong> <small></small></h4>
+                </div>
+                <div class="modal-body">
+                    <table class="table">
+                        <tr ng-repeat="(key, value) in modalValue.jsValue">
+                            <td>{{key}}</td>
+                            <td style="text-align: right; overflow-wrap:break-word"><code>{{value}}</code></td>
+                        </tr>
+                    </table>
+                    <!--<code>{{modalValue}}</code>-->
+                </div>
+                <!--<div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>-->
+            </div>
+        </div>
+    </div>
+</div>
+
+<div>
+    <div class="modal fade" id="keyValueTextModal" tabindex="-1" role="dialog" aria-labelledby="keyValueTextModalLabel">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="keyValueTextModalLabel">{{endpointInfo.id}} / <strong>{{modalKey}}</strong> <small></small></h4>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-body" style="overflow-wrap:break-word">
+                        <code>{{modalValue.jsValue}}</code>
+                    </div>
+                </div>
+                <!--<div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>-->
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div>
+    <h3>Time Series</h3>
     <div class="table-responsive">
-        <table class="table table-striped">
+        <table class="table">
             <thead>
             <tr>
                 <th>Name</th>
@@ -57,15 +104,55 @@
             </tr>
             </thead>
             <tbody>
-            <tr ng-repeat="(key, data) in dataMap">
-                <td>{{key}}</td>
-                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().displayValue">{{data.db.currentValue().displayValue}}</td>
-                <td style="text-align: right" ng-if="data.db.currentValue() && !data.db.currentValue().displayValue">{{data.db.currentValue().value}}</td>
-                <td style="text-align: right" ng-if="!data.db.currentValue()"> - </td>
-                <td ng-if="data.metadata && data.metadata.unit">{{data.metadata.unit}}</td>
-                <td ng-if="!data.metadata.unit || !data.metadata.unit"></td>
-                <td ng-if="data.db.currentValue()">{{data.db.currentValue().date | date:'HH:mm:ss.sss yyyy-MM-dd'}}</td>
-                <td ng-if="!data.db.currentValue()"> - </td>
+                <tr ng-repeat="data in timeSeriesArray">
+                    <td>{{data.name}}</td>
+                    <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().displayValue">{{data.db.currentValue().displayValue}}</td>
+                    <td style="text-align: right" ng-if="data.db.currentValue() && !data.db.currentValue().displayValue">{{data.db.currentValue().value}}</td>
+                    <td style="text-align: right" ng-if="!data.db.currentValue()"> - </td>
+                    <td ng-if="data.metadata && data.metadata.unit">{{data.metadata.unit}}</td>
+                    <td ng-if="!data.metadata.unit || !data.metadata.unit"></td>
+                    <td ng-if="data.db.currentValue()">{{data.db.currentValue().date | date:'HH:mm:ss.sss yyyy-MM-dd'}}</td>
+                    <td ng-if="!data.db.currentValue()"> - </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<div>
+    <h3>Key Values</h3>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th style="text-align: right">Value</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr ng-repeat="data in latestKeyValueArray">
+                <td>{{data.name}}</td>
+                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().jsValue && valueIsComplex(data.db.currentValue().jsValue)">
+                    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#keyValueObjectModal" data-key="{{data.name}}">
+                        <span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
+                    </button>
+                </td>
+                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().jsValue && valueIsLong(data.db.currentValue().jsValue, 50)">
+                    <code>{{data.db.currentValue().jsValue | limitTo: 50}}</code> ...
+                    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#keyValueTextModal" data-key="{{data.name}}">
+                        <span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
+                    </button>
+                </td>
+                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().jsValue && !valueIsComplex(data.db.currentValue().jsValue) && !valueIsLong(data.db.currentValue().jsValue, 50)">
+                    {{data.db.currentValue().jsValue}}
+                </td>
+                <!--<td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().jsValue && (typeof data.db.currentValue().jsValue === 'object' || (typeof data.db.currentValue().jsValue === 'string' && data.db.currentValue().jsValue.length > 30))">
+                    complex!
+                </td>
+                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().jsValue && !(typeof data.db.currentValue().jsValue === 'object' || (typeof data.db.currentValue().jsValue === 'string' && data.db.currentValue().jsValue.length > 30))">
+                    {{data.db.currentValue().jsValue}}
+                </td>-->
             </tr>
             </tbody>
         </table>

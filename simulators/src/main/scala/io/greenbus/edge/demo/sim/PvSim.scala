@@ -18,7 +18,8 @@
  */
 package io.greenbus.edge.demo.sim
 
-import io.greenbus.edge.Path
+import io.greenbus.edge.{ Path, SequencedValue, ValueString }
+import play.api.libs.json.Json
 
 object EllipseParams {
   import play.api.libs.json._
@@ -44,6 +45,8 @@ object PvMapping {
   val pvOutputPower = Path("OutputPower")
   val pvCapacity = Path("PowerCapacity")
   val faultStatus = Path("FaultStatus")
+
+  val params = Path("Params")
 
   val faultEnable = Path("FaultEnable")
   val faultDisable = Path("FaultDisable")
@@ -77,14 +80,23 @@ import io.greenbus.edge.{ Path, Value, ValueBool, ValueDouble }
 class PvSim(params: PvParams, initialState: PvState) extends SimulatorComponent {
 
   private var state = initialState
+  private var paramsPublished = false
 
   def currentState: PvState = state
 
   def updates(line: LineState, time: Long): Seq[SimUpdate] = {
-    Seq(
+    val data = Seq(
       TimeSeriesUpdate(PvMapping.faultStatus, ValueBool(state.fault)),
       TimeSeriesUpdate(PvMapping.pvOutputPower, ValueDouble(atTime(time))),
       TimeSeriesUpdate(PvMapping.pvCapacity, ValueDouble(params.curve.b)))
+
+    val info = if (!paramsPublished) {
+      Seq(SeqValueUpdate(PvMapping.params, ValueString(Json.toJson(params).toString(), Some("application/json"))))
+    } else {
+      Seq()
+    }
+
+    data ++ info
   }
 
   def handlers: Map[Path, (Option[Value]) => Boolean] = {

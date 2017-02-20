@@ -27,7 +27,10 @@ function valueToJsValue(v) {
 
         } else if (key === 'stringValue') {
             if (v[key]['mimeType'] != null) {
-                return v[key]
+                return {
+                    text: v[key].value,
+                    mimeType: valueToJsValue(v[key]['mimeType'])
+                };
             } else {
                 return v[key].value;
             }
@@ -277,6 +280,65 @@ var endpointInfo = function(id, desc) {
     };
 };
 
+var nullDb = function() {
+    return {
+        currentValue: function() { return null; },
+        observe: function(notification) {
+            console.log("Unhandled data type: ")
+            console.log(notification);
+        }
+    }
+}
+
+var kvDb = function(kvDesc, indexes, metadata) {
+
+    var current = null;
+
+    var handleSeqValue = function(v) {
+        console.log("handleValue: ");
+        console.log(v);
+
+        var jsValue = valueToJsValue(v);
+        console.log("JSVALUE:");
+        console.log(jsValue);
+
+        current = {
+            type: 'latestKeyValue',
+            value: v,
+            jsValue: jsValue
+        };
+    };
+
+    return {
+        currentValue: function() {
+            return current;
+        },
+        observe: function(notification) {
+            console.log("KVDB notification: ");
+            console.log(notification);
+
+            if (notification.update != null) {
+                var update = notification.update;
+                if (update.sequencedValueUpdate != null) {
+                    var value = update.sequencedValueUpdate.value;
+                    if (value != null) {
+                        handleSeqValue(value);
+                    }
+                }
+
+            } else if (notification.state != null) {
+                var state = notification.state;
+                if (state.sequencedValueState != null) {
+                    var value = state.sequencedValueState.value;
+                    if (value != null) {
+                        handleSeqValue(value);
+                    }
+                }
+            }
+        }
+    }
+}
+
 var tsDb = function(tsDesc, indexes, metadata) {
 
     // TODO: caching, rotating store, etc...
@@ -302,7 +364,7 @@ var tsDb = function(tsDesc, indexes, metadata) {
             displayValue = valueMap[v];
         }
 
-        current = { value: v, displayValue: displayValue, time: t, date: date };
+        current = { type: 'timeSeriesValue', value: v, displayValue: displayValue, time: t, date: date };
     }
 
     return {
@@ -346,6 +408,7 @@ var tsDb = function(tsDesc, indexes, metadata) {
 
 var dataObject = function(endpointId, key, desc, dbParam) {
 
+    var name = pathToString(key);
     var indexes = null;
     var metadata = null;
 
@@ -362,18 +425,28 @@ var dataObject = function(endpointId, key, desc, dbParam) {
         });
     }
 
-    var db = null;
+    var type = null;
+    var db = nullDb();
     if (dbParam) {
         db = dbParam;
     } else {
         if (desc['timeSeriesValue'] != null) {
             db = tsDb(desc['timeSeriesValue'], indexes, metadata);
+            type = 'timeSeriesValue';
+        } else if (desc['latestKeyValue']) {
+            db = kvDb(desc['latestKeyValue'], indexes, metadata);
+            type = 'latestKeyValue';
+        } else {
+            console.log("unhandled desc:")
+            console.log(desc);
         }
     }
 
     return {
         endpointId: endpointId,
+        name : name,
         key: key,
+        type: type,
         indexes: indexes,
         metadata: metadata,
         db: db
@@ -453,18 +526,68 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
     var name = $routeParams.name;
     $scope.name = name;
-    $scope.dataTable = [];
-    $scope.outputTable = [];
+    //$scope.dataTable = [];
+    //$scope.outputTable = [];
 
     $scope.dataMap = {};
+    $scope.timeSeriesArray = null;
+    $scope.latestKeyValueArray = null;
+
     $scope.outputMap = {};
 
     $scope.endpointInfo = null;
+
+    var updateDataTables = function() {
+        var ts = [];
+        var kv = [];
+
+        for (var key in $scope.dataMap) {
+            var data = $scope.dataMap[key]
+            var type = data.type;
+            if (type != null) {
+                if (type === 'latestKeyValue') {
+                    kv.push(data);
+                } else if (type === 'timeSeriesValue') {
+                    ts.push(data);
+                }
+            }
+        }
+
+        if (ts.length > 0) {
+            $scope.timeSeriesArray = ts;
+        }
+        if (kv.length > 0) {
+            $scope.latestKeyValueArray = kv;
+        }
+    };
+
+    $scope.valueIsComplex = function(v) {
+        return typeof v === 'object';
+    }
+    $scope.valueIsLong = function(v, len) {
+        return typeof v === 'string' && v.length > len
+    }
 
     $('#metadataModal').on('show.bs.modal', function (event) {
         console.log("saw modal event");
         var button = $(event.relatedTarget); // Button that triggered the modal
         $scope.modalKey = button.data('key');
+        $scope.$digest();
+    });
+
+    $('#keyValueObjectModal').on('show.bs.modal', function (event) {
+        console.log("saw kv modal event");
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        $scope.modalKey = button.data('key');
+        $scope.modalValue = $scope.dataMap[button.data('key')].db.currentValue();
+        $scope.$digest();
+    });
+
+    $('#keyValueTextModal').on('show.bs.modal', function (event) {
+        console.log("saw kv text modal event");
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        $scope.modalKey = button.data('key');
+        $scope.modalValue = $scope.dataMap[button.data('key')].db.currentValue();
         $scope.$digest();
     });
 
@@ -619,7 +742,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
         // TODO: remove removed keys
 
-        //updateTables();
+        updateDataTables();
         updateKeySub(dataKeys, outputKeys);
 
         $scope.$digest();

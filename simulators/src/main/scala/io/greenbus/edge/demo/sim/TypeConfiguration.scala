@@ -92,6 +92,7 @@ object PvDef extends SimulatorDef {
 
 sealed trait SimUpdate
 case class TimeSeriesUpdate(path: Path, v: SampleValue) extends SimUpdate
+case class SeqValueUpdate(path: Path, v: Value) extends SimUpdate
 
 trait SimulatorComponent {
   def updates(line: LineState, time: Long): Seq[SimUpdate]

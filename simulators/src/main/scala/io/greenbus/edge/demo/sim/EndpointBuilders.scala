@@ -40,6 +40,11 @@ object EndpointBuilders {
       MetadataDesc(indexes, meta))
   }
 
+  def kv(v: Value, indexes: Map[Path, IndexableValue] = Map(), meta: Map[Path, Value] = Map()): LatestKeyValueEntry = {
+    LatestKeyValueEntry(
+      v, MetadataDesc(indexes, meta))
+  }
+
   val faultType = "fault"
   val outputPowerType = "outputPower"
   val outputTargetType = "outputTarget"
@@ -162,12 +167,14 @@ object EndpointBuilders {
     ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
   }
 
-  def buildPv(): ClientEndpointPublisherDesc = {
+  def buildPv(params: PvParams): ClientEndpointPublisherDesc = {
     val now = System.currentTimeMillis()
 
     val indexes = Map(Path("gridDeviceType") -> ValueSimpleString("gen"))
     val meta = Map.empty[Path, Value]
-    val latestKvs = Map.empty[Path, LatestKeyValueEntry]
+
+    val latestKvs = Map(
+      PvMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
 
     val timeSeries = Map(
       PvMapping.pvOutputPower -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),

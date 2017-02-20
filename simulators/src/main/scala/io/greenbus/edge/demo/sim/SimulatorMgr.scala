@@ -34,8 +34,9 @@ class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord) extends LazyLo
 
   private var publisherPairs = Vector.empty[SimulatorPublisherPair]
 
-  private val pv1 = new PvSim(PvParams.basic, PvSim.PvState(1.0, fault = false))
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pv1, "PV1", EndpointBuilders.buildPv())
+  private val pvParams = PvParams.basic
+  private val pv1 = new PvSim(pvParams, PvSim.PvState(1.0, fault = false))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pv1, "PV1", EndpointBuilders.buildPv(pvParams))
 
   private val essParams = EssParams.basic
   private val ess1 = new EssSim(essParams, EssSim.EssState(EssSim.Constant, 0.5 * essParams.capacity, 0.0, 0.0, false))
@@ -99,6 +100,13 @@ class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord) extends LazyLo
             case None => logger.warn("Path for update unrecognized: " + update.path)
             case Some(sink) =>
               sink.push(TimeSeriesSample(now, update.v))
+              publishersToFlush += pair.publisher
+          }
+        case update: SeqValueUpdate =>
+          pair.publisher.keyValueStreams.get(update.path) match {
+            case None => logger.warn("Path for update unrecognized: " + update.path)
+            case Some(sink) =>
+              sink.push(update.v)
               publishersToFlush += pair.publisher
           }
       }
