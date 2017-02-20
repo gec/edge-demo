@@ -106,13 +106,13 @@ object EndpointBuilders {
     val modeMapping = ValueArray(Vector(
       ValueObject(Map(
         "index" -> ValueUInt32(0),
-        "mode" -> ValueString("Constant"))),
+        "name" -> ValueString("Constant"))),
       ValueObject(Map(
         "index" -> ValueUInt32(1),
-        "mode" -> ValueString("Smoothing"))),
+        "name" -> ValueString("Smoothing"))),
       ValueObject(Map(
         "index" -> ValueUInt32(2),
-        "mode" -> ValueString("GridForming")))))
+        "name" -> ValueString("GridForming")))))
 
     val setModeMetadata = Map(Path("simpleInputType") -> ValueString("integer"), Path("integerMapping") -> modeMapping)
 

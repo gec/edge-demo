@@ -37,19 +37,22 @@ function valueToJsValue(v) {
 
         } else if (key === 'arrayValue') {
             return v[key].element.map(function(elem) {
-                valueToJsValue(elem)
+                return valueToJsValue(elem);
             });
 
         } else if (key === 'objectValue') {
-            return v[key].fields;
+            var obj = {};
+            var fields = v[key].fields;
+            if (fields != null) {
+                for (var k in fields) {
+                    obj[k] = valueToJsValue(fields[k]);
+                }
+            }
+            return obj;
 
         } else {
             return v[key];
         }
-    }
-
-    if (v['floatValue'] != null) {
-        v.floatValue
     }
 }
 
@@ -301,12 +304,13 @@ var outputObject = function(endpointId, key, desc) {
             if (simpleInputType === 'integer') {
 
                 var mapping = metadata['integerMapping']
-                /*if (mapping != null) {
-
+                if (mapping != null) {
+                    console.log("MAPPING: ");
+                    console.log(mapping);
+                    inputDef = { type: 'integer', mapping: mapping };
                 } else {
                     inputDef = { type: 'integer' };
-                }*/
-                inputDef = { type: 'integer' };
+                }
 
             } else if (simpleInputType === 'double') {
                 inputDef = { type: 'double' };
@@ -398,6 +402,31 @@ angular.module('edgeGui', [ 'ngRoute' ])
         };
 
         var params = {};
+
+        connectionService.outputRequest(endPath, params, function(result) {
+            console.log("RESULT:")
+            console.log(result);
+        });
+    };
+
+    $scope.issueIntegerOutput = function(key, outputObj) {
+
+        console.log("issueIntegerOutput");
+        console.log(key);
+        console.log(outputObj);
+
+        var outputValue = Number(outputObj.userOutput);
+
+        var endPath = {
+            endpointId: endpointIdForName(outputObj.endpointId),
+            key: outputObj.key
+        };
+
+        var params = {
+            output_value: {
+                sint64_value: outputValue
+            }
+        };
 
         connectionService.outputRequest(endPath, params, function(result) {
             console.log("RESULT:")
