@@ -344,27 +344,45 @@ var tsDb = function(tsDesc, indexes, metadata) {
     // TODO: caching, rotating store, etc...
     var current = null;
 
-    var valueMap = null;
+    var integerMap = null;
     if (metadata && metadata.integerMapping != null) {
         console.log("integer mapping: ");
         console.log(metadata.integerMapping);
-        valueMap = {};
+        integerMap = {};
         metadata.integerMapping.forEach(function(elem) {
-            valueMap[elem.index] = elem.name;
+            integerMap[elem.index] = elem.name;
         });
     }
 
+    var edgeSampleValueToJsSampleValue = function(v) {
+        for (var k in v) {
+            if (k === 'floatValue' || k === 'doubleValue') {
+                return { decimal: v[k] }
+            } else if (k === 'sint32Value' || k === 'uint32Value' || k === 'sint64Value' || k === 'uint64Value') {
+                return { integer: v[k] }
+            } else if (k === 'boolValue') {
+                return { bool: v[k] }
+            } else {
+                console.log("Unrecognized sample value type: ");
+                console.log(v);
+                return null;
+            }
+        }
+    }
+
     var handleTsSeq = function(tss) {
+
+        var rawValue = tss.sample.value
         var v = sampleValueToSimpleValue(tss.sample.value);
         var t = tss.sample.time;
         var date = new Date(parseInt(t));
 
-        var displayValue = null;
-        if (valueMap) {
-            displayValue = valueMap[v];
+        var typedValue = edgeSampleValueToJsSampleValue(tss.sample.value)
+        if (typedValue != null && typedValue.integer != null && integerMap != null && integerMap[typedValue.integer] != null) {
+            typedValue = { string: integerMap[typedValue.integer] };
         }
 
-        current = { type: 'timeSeriesValue', value: v, displayValue: displayValue, time: t, date: date };
+        current = { type: 'timeSeriesValue', value: v, typedValue: typedValue, time: t, date: date };
     }
 
     return {

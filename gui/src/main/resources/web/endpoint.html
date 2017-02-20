@@ -106,9 +106,14 @@
             <tbody>
                 <tr ng-repeat="data in timeSeriesArray">
                     <td>{{data.name}}</td>
-                    <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().displayValue">{{data.db.currentValue().displayValue}}</td>
-                    <td style="text-align: right" ng-if="data.db.currentValue() && !data.db.currentValue().displayValue">{{data.db.currentValue().value}}</td>
                     <td style="text-align: right" ng-if="!data.db.currentValue()"> - </td>
+                    <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.bool != null">{{data.db.currentValue().typedValue.bool}}</td>
+                    <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.integer != null">{{data.db.currentValue().typedValue.integer}}</td>
+                    <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.decimal != null">{{data.db.currentValue().typedValue.decimal | number: 2}}</td>
+                    <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.string != null">{{data.db.currentValue().typedValue.string}}</td>
+                    <!--<td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().displayValue">{{data.db.currentValue().displayValue}}</td>
+                    <td style="text-align: right" ng-if="data.db.currentValue() && !data.db.currentValue().displayValue">{{data.db.currentValue().value}}</td>
+                    <td style="text-align: right" ng-if="!data.db.currentValue()"> - </td>-->
                     <td ng-if="data.metadata && data.metadata.unit">{{data.metadata.unit}}</td>
                     <td ng-if="!data.metadata.unit || !data.metadata.unit"></td>
                     <td ng-if="data.db.currentValue()">{{data.db.currentValue().date | date:'HH:mm:ss.sss yyyy-MM-dd'}}</td>
