@@ -47,8 +47,16 @@ class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord) extends LazyLo
   private val load1 = new LoadSim(LoadMapping.defaultParams, load, LoadSim.LoadState(0))
   publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, load1, "LOAD1", EndpointBuilders.buildLoad())
 
+  private val pccBkr = new BreakerSim(true)
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pccBkr, "PCC_BKR", EndpointBuilders.buildBreaker(pcc = true))
+
+  private val custBkr = new BreakerSim(true)
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pccBkr, "CUST_BKR", EndpointBuilders.buildBreaker(pcc = false))
+
   private val simulator = new Simulator(
-    SimulatorState(0.0, 0.0, 0.0, 0.0, pccStatus = true, custBkrStatus = true),
+    SimulatorState(0.0, 0.0, 0.0, 0.0),
+    pccBkr = pccBkr,
+    custBkr = custBkr,
     chps = Seq(chp1),
     esses = Seq(ess1),
     pvs = Seq(pv1),

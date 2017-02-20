@@ -24,12 +24,12 @@ case class SimulatorState(
   voltageNominal: Double,
   voltagePcc: Double,
   currentPcc: Double,
-  frequency: Double,
-  pccStatus: Boolean,
-  custBkrStatus: Boolean)
+  frequency: Double)
 
 class Simulator(
     start: SimulatorState,
+    pccBkr: BreakerSim,
+    custBkr: BreakerSim,
     chps: Seq[ChpSim],
     esses: Seq[EssSim],
     pvs: Seq[PvSim],
@@ -142,7 +142,8 @@ class Simulator(
     essWithPower: Seq[(EssSim, Double)],
     loadWithPower: Seq[(LoadSim, Double)]): LineState = {
 
-    val gridConnected = simulation.custBkrStatus && simulation.pccStatus
+    //val gridConnected = simulation.custBkrStatus && simulation.pccStatus
+    val gridConnected = pccBkr.status && custBkr.status
 
     if (gridConnected) {
 
@@ -189,7 +190,7 @@ class Simulator(
     val nonFormingEssWithPower = nonFormingEsses.map(sim => (sim, sim.currentState.output))
     val loadWithPower = loads.map(sim => (sim, sim.valueAt(now)))
 
-    val gridConnected = simulation.custBkrStatus && simulation.pccStatus
+    val gridConnected = pccBkr.status && custBkr.status
 
     if (!gridConnected) {
 

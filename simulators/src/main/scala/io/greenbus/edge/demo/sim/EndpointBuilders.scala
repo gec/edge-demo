@@ -43,17 +43,52 @@ object EndpointBuilders {
   val faultType = "fault"
   val outputPowerType = "outputPower"
   val outputTargetType = "outputTarget"
+  val bkrStatusType = "breakerStatus"
+
+  /*
+
+  val bkrPower = Path("DemandPower")
+  val bkrVoltage = Path("PCCVoltage")
+  val bkrCurrent = Path("PCCCurrent")
+  //val bkrFrequency = Path("Frequency")
+
+  val bkrStatus = Path("BreakerStatus")
+
+  val bkrTrip = Path("BreakerTrip")
+  val bkrClose = Path("BreakerClose")
+   */
+  def buildBreaker(pcc: Boolean): ClientEndpointPublisherDesc = {
+    val now = System.currentTimeMillis()
+
+    val gridType = if (pcc) "pccBkr" else "custBkr"
+
+    val indexes = Map(Path("gridDeviceType") -> ValueSimpleString(gridType))
+    val meta = Map.empty[Path, Value]
+    val latestKvs = Map.empty[Path, LatestKeyValueEntry]
+
+    val timeSeries = Map(
+      BreakerMapping.bkrPower -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
+      BreakerMapping.bkrVoltage -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kV"))),
+      BreakerMapping.bkrCurrent -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("A"))),
+      BreakerMapping.bkrStatus -> tsBool(true, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(bkrStatusType))))
+
+    val outputs = Map(
+      BreakerMapping.bkrTrip -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString(s"${gridType}Trip")), Map(Path("simpleInputType") -> ValueString("indication")))),
+      BreakerMapping.bkrClose -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString(s"${gridType}Close")), Map(Path("simpleInputType") -> ValueString("indication")))))
+
+    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
+  }
 
   def buildLoad(): ClientEndpointPublisherDesc = {
     val now = System.currentTimeMillis()
 
-    val indexes = Map.empty[Path, IndexableValue]
+    val indexes = Map(Path("gridDeviceType") -> ValueSimpleString("load"))
     val meta = Map.empty[Path, Value]
     val latestKvs = Map.empty[Path, LatestKeyValueEntry]
 
     val timeSeries = Map(
       LoadMapping.power -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
-      LoadMapping.voltage -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("V"))),
+      LoadMapping.voltage -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kV"))),
       LoadMapping.current -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("A"))),
       LoadMapping.kvar -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kVAR"))))
 
@@ -65,7 +100,7 @@ object EndpointBuilders {
   def buildChp(): ClientEndpointPublisherDesc = {
     val now = System.currentTimeMillis()
 
-    val indexes = Map.empty[Path, IndexableValue]
+    val indexes = Map(Path("gridDeviceType") -> ValueSimpleString("gen"))
     val meta = Map.empty[Path, Value]
     val latestKvs = Map.empty[Path, LatestKeyValueEntry]
 
@@ -130,7 +165,7 @@ object EndpointBuilders {
   def buildPv(): ClientEndpointPublisherDesc = {
     val now = System.currentTimeMillis()
 
-    val indexes = Map.empty[Path, IndexableValue]
+    val indexes = Map(Path("gridDeviceType") -> ValueSimpleString("gen"))
     val meta = Map.empty[Path, Value]
     val latestKvs = Map.empty[Path, LatestKeyValueEntry]
 
