@@ -44,7 +44,6 @@
 </div>
 
 
-
 <div>
     <h3>Data</h3>
     <div class="table-responsive">
@@ -58,11 +57,14 @@
             </tr>
             </thead>
             <tbody>
-            <tr ng-repeat="line in dataTable">
-                <td>{{line.name}}</td>
-                <td style="text-align: right">{{line.value}}</td>
-                <td>{{line.unit}}</td>
-                <td>{{line.time | date:'HH:mm:ss.sss yyyy-MM-dd'}}</td>
+            <tr ng-repeat="(key, data) in dataMap">
+                <td>{{key}}</td>
+                <td style="text-align: right" ng-if="data.db.currentValue()">{{data.db.currentValue().value}}</td>
+                <td style="text-align: right" ng-if="!data.db.currentValue()"> - </td>
+                <td ng-if="data.metadata && data.metadata.unit">{{data.metadata.unit}}</td>
+                <td ng-if="!data.metadata.unit || !data.metadata.unit"></td>
+                <td ng-if="data.db.currentValue()">{{data.db.currentValue().date | date:'HH:mm:ss.sss yyyy-MM-dd'}}</td>
+                <td ng-if="!data.db.currentValue()"> - </td>
             </tr>
             </tbody>
         </table>

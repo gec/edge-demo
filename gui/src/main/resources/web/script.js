@@ -277,11 +277,97 @@ var endpointInfo = function(id, desc) {
     };
 };
 
-var outputObject = function(endpointId, key, desc) {
+var tsDb = function(tsDesc, indexes, metadata) {
+
+    // TODO: caching, rotating store, etc...
+    var current = null;
+
+    var handleTsSeq = function(tss) {
+        var v = sampleValueToSimpleValue(tss.sample.value);
+        var t = tss.sample.time;
+        var date = new Date(parseInt(t));
+        current = { value: v, time: t, date: date };
+    }
+
+    return {
+        currentValue: function() {
+            return current;
+        },
+        observe: function(notification) {
+            console.log("TSDB notification: ");
+            console.log(notification);
+
+            if (notification.update != null) {
+                var update = notification.update;
+                if (update.timeSeriesUpdate != null) {
+                    var values = update.timeSeriesUpdate.values;
+                    if (values != null) {
+                        values.forEach(function (elem) {
+                            console.log("state elem: ");
+                            console.log(elem);
+                            handleTsSeq(elem);
+                        });
+                    }
+                }
+
+            } else if (notification.state != null) {
+                var state = notification.state;
+                if (state.timeSeriesState != null) {
+                    var values = state.timeSeriesState.values;
+                    if (values != null) {
+                        values.forEach(function (elem) {
+                            console.log("update elem: ");
+                            console.log(elem);
+                            handleTsSeq(elem);
+                        });
+                    }
+                }
+            }
+
+        }
+    }
+};
+
+var dataObject = function(endpointId, key, desc, dbParam) {
 
     var indexes = null;
     var metadata = null;
 
+    if (desc.indexes != null) {
+        desc.indexes.forEach(function(kv) {
+            if (indexes == null) { indexes = {}; }
+            indexes[pathToString(kv.key)] = sampleValueToSimpleValue(kv.value);
+        });
+    }
+    if (desc.metadata != null) {
+        desc.metadata.forEach(function(kv) {
+            if (metadata == null) { metadata = {}; }
+            metadata[pathToString(kv.key)] = valueToJsValue(kv.value);
+        });
+    }
+
+    var db = null;
+    if (dbParam) {
+        db = dbParam;
+    } else {
+        if (desc['timeSeriesValue'] != null) {
+            db = tsDb(desc['timeSeriesValue'], indexes, metadata);
+        }
+    }
+
+    return {
+        endpointId: endpointId,
+        key: key,
+        indexes: indexes,
+        metadata: metadata,
+        db: db
+    };
+};
+
+var outputObject = function(endpointId, key, desc) {
+
+    var indexes = null;
+    var metadata = null;
 
     if (desc.indexes != null) {
         desc.indexes.forEach(function(kv) {
@@ -321,7 +407,6 @@ var outputObject = function(endpointId, key, desc) {
         }
     }
 
-
     return {
         endpointId: endpointId,
         key: key,
@@ -354,6 +439,8 @@ angular.module('edgeGui', [ 'ngRoute' ])
     $scope.name = name;
     $scope.dataTable = [];
     $scope.outputTable = [];
+
+    $scope.dataMap = {};
     $scope.outputMap = {};
 
     $scope.endpointInfo = null;
@@ -463,9 +550,11 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
                 if (descriptor.dataKeySet != null) {
                     descriptor.dataKeySet.forEach(function(elem) {
+                        console.log("ELEM:");
+                        console.log(elem);
 
-                        var indexes = {}
-                        var metadata = {}
+                        var indexes = {};
+                        var metadata = {};
 
                         if (elem.value.indexes != null) {
                             elem.value.indexes.forEach(function(kv) {
@@ -482,13 +571,14 @@ angular.module('edgeGui', [ 'ngRoute' ])
                         var endPath = { endpointId: endId, key: elem.key }
                         dataKs.push(endPath)
 
-                        var mapEntry = { key: elem.key, desc: elem.value, indexes: indexes, metadata: metadata }
                         var pathStr = pathToString(elem.key);
+                        var db = null;
                         var existing = dataMap[pathStr];
                         if (existing != null && existing.value != null) {
-                            mapEntry.value = existing.value
+                            db = existing.value
                         }
-                        dataMap[pathStr] = mapEntry;
+                        var data = dataObject(name, elem.key, elem.value, db);
+                        $scope.dataMap[pathStr] = data;
                     });
                 }
                 if (descriptor.outputKeySet != null) {
@@ -511,61 +601,13 @@ angular.module('edgeGui', [ 'ngRoute' ])
             outputKeys = outputKs;
         });
 
-        updateTables();
+        // TODO: remove removed keys
+
+        //updateTables();
         updateKeySub(dataKeys, outputKeys);
 
         $scope.$digest();
     });
-
-    var updateTables = function() {
-        //console.log("DATA MAP: ");
-        //console.log(dataMap);
-
-        var table = []
-        for (var key in dataMap) {
-            console.log
-            var entry = dataMap[key];
-            var name = key;
-            var v = null;
-            var t = null;
-
-            if (entry.value != null) {
-                if (entry.value.state != null) {
-                    if (entry.value.state.timeSeriesState != null) {
-                        var values = entry.value.state.timeSeriesState.values;
-                        if (values != null) {
-                            values.forEach(function (elem) {
-                                v = sampleValueToSimpleValue(elem.sample.value);
-                                t = elem.sample.time;
-                            });
-                        }
-                    }
-                } else if (entry.value.update != null) {
-                    if (entry.value.update.timeSeriesUpdate != null) {
-                        var values = entry.value.update.timeSeriesUpdate.values;
-                        if (values != null) {
-                            values.forEach(function (elem) {
-                                v = sampleValueToSimpleValue(elem.sample.value);
-                                t = elem.sample.time;
-                            });
-                        }
-                    }
-                }
-            }
-
-            if (v != null && t != null) {
-                var date = new Date(parseInt(t));
-                var unit = "";
-                if (entry.metadata['unit'] != null) {
-                    unit = entry.metadata['unit'];
-                }
-
-                table.push({name: name, value: v, unit: unit, time: date})
-            }
-        }
-
-        $scope.dataTable = table;
-    }
 
     var updateKeySub = function(dataKeys, outputKeys) {
         if (keySub != null) {
@@ -585,12 +627,16 @@ angular.module('edgeGui', [ 'ngRoute' ])
             if (dataNotification != null) {
                 dataNotification.forEach(function(elem) {
                     var pathStr = pathToString(elem.key.key);
-                    var mapEntry = dataMap[pathStr];
-                    mapEntry.value = elem.value;
+                    //console.log("NOTIFICATION: ");
+                    //console.log(elem.value);
+                    var dataObj = $scope.dataMap[pathStr];
+                    if (dataObj != null) {
+                        dataObj.db.observe(elem.value);
+                    }
                 });
             }
 
-            updateTables();
+            $scope.$digest();
         });
     };
 

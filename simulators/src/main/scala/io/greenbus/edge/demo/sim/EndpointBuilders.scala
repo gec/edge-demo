@@ -90,19 +90,6 @@ object EndpointBuilders {
 
     val latestKvs = Map.empty[Path, LatestKeyValueEntry]
 
-    val timeSeries = Map(
-      EssMapping.percentSoc -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("percentSoc")), meta = Map(Path("unit") -> ValueString("%"))),
-      EssMapping.mode -> tsEnum(0, now),
-      EssMapping.socMax -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("socMax")), meta = Map(Path("unit") -> ValueString("%"))),
-      EssMapping.socMin -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("socMin")), meta = Map(Path("unit") -> ValueString("%"))),
-      EssMapping.chargeDischargeRate -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
-      EssMapping.chargeRateMax -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
-      EssMapping.dischargeRateMax -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
-      EssMapping.capacity -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kWh"))),
-      EssMapping.efficiency -> tsDouble(0.0, now),
-      EssMapping.chargeRateTarget -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputTargetType)), meta = Map(Path("unit") -> ValueString("kW"))),
-      EssMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType))))
-
     val modeMapping = ValueArray(Vector(
       ValueObject(Map(
         "index" -> ValueUInt32(0),
@@ -114,7 +101,22 @@ object EndpointBuilders {
         "index" -> ValueUInt32(2),
         "name" -> ValueString("GridForming")))))
 
-    val setModeMetadata = Map(Path("simpleInputType") -> ValueString("integer"), Path("integerMapping") -> modeMapping)
+    val modeMapKv = Path("integerMapping") -> modeMapping
+
+    val timeSeries = Map(
+      EssMapping.percentSoc -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("percentSoc")), meta = Map(Path("unit") -> ValueString("%"))),
+      EssMapping.mode -> tsEnum(0, now, meta = Map(modeMapKv)),
+      EssMapping.socMax -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("socMax")), meta = Map(Path("unit") -> ValueString("%"))),
+      EssMapping.socMin -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("socMin")), meta = Map(Path("unit") -> ValueString("%"))),
+      EssMapping.chargeDischargeRate -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
+      EssMapping.chargeRateMax -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
+      EssMapping.dischargeRateMax -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
+      EssMapping.capacity -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kWh"))),
+      EssMapping.efficiency -> tsDouble(0.0, now),
+      EssMapping.chargeRateTarget -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputTargetType)), meta = Map(Path("unit") -> ValueString("kW"))),
+      EssMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType))))
+
+    val setModeMetadata = Map(Path("simpleInputType") -> ValueString("integer"), modeMapKv)
 
     val outputs = Map(
       EssMapping.setBatteryMode -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridValueType") -> ValueSimpleString("setEssMode")), setModeMetadata)),
