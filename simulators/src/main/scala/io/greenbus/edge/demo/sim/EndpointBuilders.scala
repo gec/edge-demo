@@ -76,8 +76,8 @@ object EndpointBuilders {
       ChpMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType))))
 
     val outputs = Map(
-      ChpMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map())),
-      ChpMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map())))
+      ChpMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
+      ChpMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))))
 
     ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
   }
@@ -103,9 +103,24 @@ object EndpointBuilders {
       EssMapping.chargeRateTarget -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputTargetType)), meta = Map(Path("unit") -> ValueString("kW"))),
       EssMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType))))
 
+    val modeMapping = ValueArray(Vector(
+      ValueObject(Map(
+        "index" -> ValueUInt32(0),
+        "mode" -> ValueString("Constant"))),
+      ValueObject(Map(
+        "index" -> ValueUInt32(1),
+        "mode" -> ValueString("Smoothing"))),
+      ValueObject(Map(
+        "index" -> ValueUInt32(2),
+        "mode" -> ValueString("GridForming")))))
+
+    val setModeMetadata = Map(Path("simpleInputType") -> ValueString("integer"), Path("integerMapping") -> modeMapping)
+
     val outputs = Map(
-      PvMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map())),
-      PvMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map())))
+      EssMapping.setBatteryMode -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridValueType") -> ValueSimpleString("setEssMode")), setModeMetadata)),
+      EssMapping.setChargeRate -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridValueType") -> ValueSimpleString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double")))),
+      EssMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
+      EssMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))))
 
     ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
   }
@@ -123,8 +138,8 @@ object EndpointBuilders {
       PvMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType))))
 
     val outputs = Map(
-      PvMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map())),
-      PvMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map())))
+      PvMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
+      PvMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))))
 
     ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
   }

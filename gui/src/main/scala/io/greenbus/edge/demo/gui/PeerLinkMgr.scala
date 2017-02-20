@@ -21,11 +21,12 @@ package io.greenbus.edge.demo.gui
 import akka.actor.{ Actor, ActorRef, PoisonPill, Props }
 import com.google.protobuf.util.JsonFormat
 import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge.{ CallMarshaller, ClientSubscriptionParams, Path }
+import io.greenbus.edge._
 import io.greenbus.edge.amqp.AmqpService
-import io.greenbus.edge.client.{ EdgeConnection, EdgeConnectionImpl, EdgeSubscription }
+import io.greenbus.edge.client.{ EdgeConnection, EdgeConnectionImpl, EdgeOutputClient, EdgeSubscription }
 import io.greenbus.edge.proto.{ ClientToServerMessage, ServerToClientMessage }
 import io.greenbus.edge.proto.convert.Conversions
+import io.greenbus.edge.proto
 
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration._
@@ -148,6 +149,61 @@ class PeerSubMgr(events: CallMarshaller, socket: Socket, printer: JsonFormat.Pri
 
 }
 
+class PeerOutputMgr(events: CallMarshaller, socket: Socket, printer: JsonFormat.Printer)(implicit e: ExecutionContext) extends LazyLogging {
+
+  private var outputClientOpt = Option.empty[EdgeOutputClient]
+  private var queue = Vector.empty[ClientOutputRequest]
+
+  def enqueue(request: ClientOutputRequest): Unit = {
+    outputClientOpt match {
+      case None => queue = queue :+ request
+      case Some(client) =>
+        doRequest(client, request)
+    }
+  }
+
+  def doRequest(client: EdgeOutputClient, request: ClientOutputRequest): Unit = {
+    logger.debug("Issuing: " + request)
+    val fut = client.issueOutput(request.key, request.value)
+    fut.foreach { result =>
+      try {
+        val resp = proto.ClientOutputResponseMessage.newBuilder()
+          .putResults(request.correlation, Conversions.toProto(result))
+          .build()
+
+        val msg = ServerToClientMessage.newBuilder()
+          .setOutputResponse(resp)
+          .build()
+
+        val json = printer.print(msg)
+        socket.send(json)
+      } catch {
+        case ex: Throwable =>
+          logger.error("Problem writing proto message: " + ex)
+      }
+    }
+    fut.failed.foreach { ex => logger.warn("Error sending client output request: " + ex) }
+  }
+
+  def connected(conn: EdgeConnection): Unit = {
+    conn.openOutputClient().foreach { cl =>
+      events.marshal {
+        outputClientOpt.foreach(_.close())
+        outputClientOpt = Some(cl)
+        queue.foreach {
+          case req => doRequest(cl, req)
+        }
+        queue = Vector.empty[ClientOutputRequest]
+      }
+    }
+  }
+
+  def close(): Unit = {
+    outputClientOpt.foreach(_.close())
+  }
+
+}
+
 object PeerLink {
 
   case object DoInit
@@ -164,6 +220,7 @@ class PeerLink(socket: Socket) extends Actor with CallMarshalActor with LazyLogg
 
   private val printer = JsonFormat.printer()
   private val subMgr = new PeerSubMgr(this.marshaller, socket, printer)
+  private var outputMgr = new PeerOutputMgr(this.marshaller, socket, printer)
 
   private val parser = JsonFormat.parser()
 
@@ -174,6 +231,7 @@ class PeerLink(socket: Socket) extends Actor with CallMarshalActor with LazyLogg
 
     case Connected(edgeConnection) =>
       subMgr.connected(edgeConnection)
+      outputMgr.connected(edgeConnection)
 
     case FromSocket(text) => {
       logger.info("Got socket text: " + text + ", " + socket)
@@ -194,6 +252,16 @@ class PeerLink(socket: Socket) extends Actor with CallMarshalActor with LazyLogg
             }
         }
 
+        if (proto.hasOutputRequest) {
+          val req = proto.getOutputRequest
+          req.getRequestsList.foreach { r =>
+            Conversions.fromProto(r) match {
+              case Left(err) => logger.error("Could not parse output request proto: " + err)
+              case Right(obj) => outputMgr.enqueue(obj)
+            }
+          }
+        }
+
       } catch {
         case ex: Throwable =>
           logger.warn("Error parsing json: " + ex)
@@ -204,6 +272,7 @@ class PeerLink(socket: Socket) extends Actor with CallMarshalActor with LazyLogg
 
   override def postStop(): Unit = {
     subMgr.close()
+    outputMgr.close()
   }
 }
 

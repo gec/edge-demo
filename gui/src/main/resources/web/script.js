@@ -81,16 +81,25 @@ function pathToString(path) {
 
 var connectionService = function(){
     var seq = 0;
+    var outputSeq = 0;
     //var connectionIdle = true;
 
     var connectParams = null;
     var socket = null;
-    var paramsMap = {}
-    var subsMap = {}
+    var paramsMap = {};
+    var subsMap = {};
+
+    var correlationMap = {};
+    var outputQueue = [];
 
     var nextSeq = function() {
         var next = seq;
         seq += 1;
+        return next;
+    }
+    var nextOutputSeq = function() {
+        var next = outputSeq;
+        outputSeq += 1;
         return next;
     }
 
@@ -131,6 +140,19 @@ var connectionService = function(){
                     }
                 }
             }
+
+            var resp = json['outputResponse'];
+            if (resp != null) {
+                for (var corr in resp.results) {
+                    var result = resp.results[corr];
+                    var cb = correlationMap[corr];
+                    if (cb != null) {
+                        cb(result);
+                    }
+                    delete correlationMap[corr];
+                }
+            }
+
         };
 
         ws.onerror = function(err) {
@@ -147,6 +169,9 @@ var connectionService = function(){
         for (var key in paramsMap) {
             var entry = paramsMap[key]
             doSubscription(key, entry.params, entry.callback);
+        }
+        for (var req in outputQueue) {
+            doOutput(req.endPath, req.params, req.callback);
         }
     }
 
@@ -167,6 +192,24 @@ var connectionService = function(){
         delete paramsMap[key];
     }
 
+    var doOutput = function(endPath, params, callback) {
+        var correlation = nextOutputSeq();
+        correlationMap[correlation] = callback;
+
+        var msg = {
+            outputRequest: {
+                requests: [
+                    {
+                        key: endPath,
+                        params: params,
+                        correlation: correlation
+                    }
+                ]
+            }
+        };
+        socket.send(JSON.stringify(msg))
+    };
+
     return {
         start: function(connParams) {
             connectParams = connParams;
@@ -184,6 +227,13 @@ var connectionService = function(){
                 remove: function() {
                     onRemove(key);
                 }
+            }
+        },
+        outputRequest: function(endPath, params, callback) {
+            if (socket != null) {
+                doOutput(endPath, params, callback);
+            } else {
+                outputQueue.push({endPath: endPath, params: params, callback: callback});
             }
         }
     };
@@ -224,6 +274,59 @@ var endpointInfo = function(id, desc) {
     };
 };
 
+var outputObject = function(endpointId, key, desc) {
+
+    var indexes = null;
+    var metadata = null;
+
+
+    if (desc.indexes != null) {
+        desc.indexes.forEach(function(kv) {
+            if (indexes == null) { indexes = {}; }
+            indexes[pathToString(kv.key)] = sampleValueToSimpleValue(kv.value);
+        });
+    }
+    if (desc.metadata != null) {
+        desc.metadata.forEach(function(kv) {
+            if (metadata == null) { metadata = {}; }
+            metadata[pathToString(kv.key)] = valueToJsValue(kv.value);
+        });
+    }
+
+    var inputDef = null;
+
+    if (metadata != null) {
+        var simpleInputType = metadata['simpleInputType'];
+        if (simpleInputType != null) {
+            if (simpleInputType === 'integer') {
+
+                var mapping = metadata['integerMapping']
+                /*if (mapping != null) {
+
+                } else {
+                    inputDef = { type: 'integer' };
+                }*/
+                inputDef = { type: 'integer' };
+
+            } else if (simpleInputType === 'double') {
+                inputDef = { type: 'double' };
+
+            } else if (simpleInputType === 'indication') {
+                inputDef = { type: 'indication' };
+            }
+        }
+    }
+
+
+    return {
+        endpointId: endpointId,
+        key: key,
+        indexes: indexes,
+        metadata: metadata,
+        inputDef: inputDef
+    };
+}
+
 angular.module('edgeGui', [ 'ngRoute' ])
     .config(function($routeProvider, $locationProvider) {
         $routeProvider
@@ -247,6 +350,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
     $scope.name = name;
     $scope.dataTable = [];
     $scope.outputTable = [];
+    $scope.outputMap = {};
 
     $scope.endpointInfo = null;
 
@@ -257,8 +361,52 @@ angular.module('edgeGui', [ 'ngRoute' ])
         $scope.$digest();
     });
 
+    $scope.issueDoubleOutput = function(key, outputObj) {
+
+        console.log("issueDoubleOutput");
+        console.log(key);
+        console.log(outputObj);
+
+        var outputValue = Number(outputObj.userOutput);
+
+        var endPath = {
+            endpointId: endpointIdForName(outputObj.endpointId),
+            key: outputObj.key
+        };
+
+        var params = {
+            output_value: {
+                double_value: outputValue
+            }
+        };
+
+        connectionService.outputRequest(endPath, params, function(result) {
+            console.log("RESULT:")
+            console.log(result);
+        });
+    };
+
+    $scope.issueIndicationOutput = function(key, outputObj) {
+
+        console.log("issueIndicationOutput");
+        console.log(key);
+        console.log(outputObj);
+
+        var endPath = {
+            endpointId: endpointIdForName(outputObj.endpointId),
+            key: outputObj.key
+        };
+
+        var params = {};
+
+        connectionService.outputRequest(endPath, params, function(result) {
+            console.log("RESULT:")
+            console.log(result);
+        });
+    };
+
     var dataMap = {};
-    var outputMap = {};
+    //var outputMap = {};
 
     var keySub = null;
 
@@ -316,6 +464,11 @@ angular.module('edgeGui', [ 'ngRoute' ])
                 }
                 if (descriptor.outputKeySet != null) {
                     descriptor.outputKeySet.forEach(function(elem) {
+                        console.log(elem);
+
+                        var output = outputObject(name, elem.key, elem.value);
+                        $scope.outputMap[pathToString(elem.key)] = output;
+
                         var endPath = { endpointId: endId, key: elem.key }
                         outputKs.push(endPath)
                     });

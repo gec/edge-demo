@@ -46,6 +46,7 @@
 
 
 <div>
+    <h3>Data</h3>
     <div class="table-responsive">
         <table class="table table-striped">
             <thead>
@@ -59,9 +60,47 @@
             <tbody>
             <tr ng-repeat="line in dataTable">
                 <td>{{line.name}}</td>
-                <td style="text-align: right">{{line.value | number:2}}</td>
+                <td style="text-align: right">{{line.value}}</td>
                 <td>{{line.unit}}</td>
                 <td>{{line.time | date:'HH:mm:ss.sss yyyy-MM-dd'}}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<div>
+    <h3>Output</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th style="text-align: right">Thing</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr ng-repeat="(key, value) in outputMap">
+                <td>{{key}}</td>
+                <!--<td style="text-align: right">{{value}}</td>-->
+                <td ng-if="value.inputDef && value.inputDef.type === 'indication'" style="text-align: right">
+                    <button type="button" class="btn btn-default" ng-click="issueIndicationOutput(key, value)">
+                        <span class="glyphicon glyphicon-circle-arrow-down" aria-hidden="true"></span>
+                    </button>
+                </td>
+                <td ng-if="value.inputDef && value.inputDef.type === 'integer'" style="text-align: right">
+                    integer
+                </td>
+                <td ng-if="value.inputDef && value.inputDef.type === 'double'" style="text-align: right">
+                    <div class="input-group pull-right">
+                        <input type="text" class="form-control ng-pristine ng-valid ng-valid-pattern" ng-model="value.userOutput" name="setpoint_value" ng-pattern="pattern" style="width:6em;" placeholder="decimal">
+                        <button type="button" class="btn btn-primary" ng-click="issueDoubleOutput(key, value)" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                            Set
+                            <span style="padding-right: 0.5em;"> </span><i ng-class="executeClasses" class="fa fa-sign-in"></i>
+                        </button>
+                    </div>
+                </td>
             </tr>
             </tbody>
         </table>
