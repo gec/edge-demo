@@ -59,7 +59,8 @@
             <tbody>
             <tr ng-repeat="(key, data) in dataMap">
                 <td>{{key}}</td>
-                <td style="text-align: right" ng-if="data.db.currentValue()">{{data.db.currentValue().value}}</td>
+                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().displayValue">{{data.db.currentValue().displayValue}}</td>
+                <td style="text-align: right" ng-if="data.db.currentValue() && !data.db.currentValue().displayValue">{{data.db.currentValue().value}}</td>
                 <td style="text-align: right" ng-if="!data.db.currentValue()"> - </td>
                 <td ng-if="data.metadata && data.metadata.unit">{{data.metadata.unit}}</td>
                 <td ng-if="!data.metadata.unit || !data.metadata.unit"></td>

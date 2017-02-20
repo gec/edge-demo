@@ -282,11 +282,27 @@ var tsDb = function(tsDesc, indexes, metadata) {
     // TODO: caching, rotating store, etc...
     var current = null;
 
+    var valueMap = null;
+    if (metadata && metadata.integerMapping != null) {
+        console.log("integer mapping: ");
+        console.log(metadata.integerMapping);
+        valueMap = {};
+        metadata.integerMapping.forEach(function(elem) {
+            valueMap[elem.index] = elem.name;
+        });
+    }
+
     var handleTsSeq = function(tss) {
         var v = sampleValueToSimpleValue(tss.sample.value);
         var t = tss.sample.time;
         var date = new Date(parseInt(t));
-        current = { value: v, time: t, date: date };
+
+        var displayValue = null;
+        if (valueMap) {
+            displayValue = valueMap[v];
+        }
+
+        current = { value: v, displayValue: displayValue, time: t, date: date };
     }
 
     return {
@@ -294,8 +310,8 @@ var tsDb = function(tsDesc, indexes, metadata) {
             return current;
         },
         observe: function(notification) {
-            console.log("TSDB notification: ");
-            console.log(notification);
+//            console.log("TSDB notification: ");
+//            console.log(notification);
 
             if (notification.update != null) {
                 var update = notification.update;
@@ -303,8 +319,8 @@ var tsDb = function(tsDesc, indexes, metadata) {
                     var values = update.timeSeriesUpdate.values;
                     if (values != null) {
                         values.forEach(function (elem) {
-                            console.log("state elem: ");
-                            console.log(elem);
+//                            console.log("state elem: ");
+//                            console.log(elem);
                             handleTsSeq(elem);
                         });
                     }
@@ -316,8 +332,8 @@ var tsDb = function(tsDesc, indexes, metadata) {
                     var values = state.timeSeriesState.values;
                     if (values != null) {
                         values.forEach(function (elem) {
-                            console.log("update elem: ");
-                            console.log(elem);
+//                            console.log("update elem: ");
+//                            console.log(elem);
                             handleTsSeq(elem);
                         });
                     }
