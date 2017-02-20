@@ -345,7 +345,7 @@ var tsDb = function(tsDesc, indexes, metadata) {
     var current = null;
 
     var integerMap = null;
-    if (metadata && metadata.integerMapping != null) {
+    if (metadata != null && metadata.integerMapping != null) {
         console.log("integer mapping: ");
         console.log(metadata.integerMapping);
         integerMap = {};
@@ -353,6 +353,19 @@ var tsDb = function(tsDesc, indexes, metadata) {
             integerMap[elem.index] = elem.name;
         });
     }
+
+    var boolMap = null;
+    if (metadata != null && metadata.boolMapping != null) {
+        console.log("bool mapping: ");
+        console.log(metadata.boolMapping);
+        boolMap = {};
+        metadata.boolMapping.forEach(function(elem) {
+            if (elem.value != null) {
+                boolMap[elem.value] = elem.name;
+            }
+        });
+    }
+
 
     var edgeSampleValueToJsSampleValue = function(v) {
         for (var k in v) {
@@ -380,6 +393,9 @@ var tsDb = function(tsDesc, indexes, metadata) {
         var typedValue = edgeSampleValueToJsSampleValue(tss.sample.value)
         if (typedValue != null && typedValue.integer != null && integerMap != null && integerMap[typedValue.integer] != null) {
             typedValue = { string: integerMap[typedValue.integer] };
+        }
+        if (typedValue != null && typedValue.bool != null && boolMap != null && boolMap[typedValue.bool] != null) {
+            typedValue = { string: boolMap[typedValue.bool] };
         }
 
         current = { type: 'timeSeriesValue', value: v, typedValue: typedValue, time: t, date: date };

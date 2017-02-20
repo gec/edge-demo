@@ -50,6 +50,26 @@ object EndpointBuilders {
   val outputTargetType = "outputTarget"
   val bkrStatusType = "breakerStatus"
 
+  val boolMappingKey = Path("boolMapping")
+
+  val faultMapping = ValueArray(Vector(
+    ValueObject(Map(
+      "value" -> ValueBool(false),
+      "name" -> ValueString("Clear"))),
+    ValueObject(Map(
+      "value" -> ValueBool(true),
+      "name" -> ValueString("Fault")))))
+  val faultMappingKv = boolMappingKey -> faultMapping
+
+  val breakerStatusMapping = ValueArray(Vector(
+    ValueObject(Map(
+      "value" -> ValueBool(false),
+      "name" -> ValueString("Open"))),
+    ValueObject(Map(
+      "value" -> ValueBool(true),
+      "name" -> ValueString("Closed")))))
+  val breakerStatusMappingKv = boolMappingKey -> breakerStatusMapping
+
   def buildBreaker(pcc: Boolean): ClientEndpointPublisherDesc = {
     val now = System.currentTimeMillis()
 
@@ -63,7 +83,7 @@ object EndpointBuilders {
       BreakerMapping.bkrPower -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
       BreakerMapping.bkrVoltage -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kV"))),
       BreakerMapping.bkrCurrent -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("A"))),
-      BreakerMapping.bkrStatus -> tsBool(true, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(bkrStatusType))))
+      BreakerMapping.bkrStatus -> tsBool(true, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(bkrStatusType)), meta = Map(breakerStatusMappingKv)))
 
     val outputs = Map(
       BreakerMapping.bkrTrip -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString(s"${gridType}Trip")), Map(Path("simpleInputType") -> ValueString("indication")))),
@@ -105,7 +125,7 @@ object EndpointBuilders {
       ChpMapping.power -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
       ChpMapping.powerCapacity -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
       ChpMapping.powerTarget -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputTargetType)), meta = Map(Path("unit") -> ValueString("kW"))),
-      ChpMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType))))
+      ChpMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType)), meta = Map(faultMappingKv)))
 
     val outputs = Map(
       ChpMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
@@ -118,7 +138,7 @@ object EndpointBuilders {
     val now = System.currentTimeMillis()
 
     val indexes = Map(Path("gridDeviceType") -> ValueSimpleString("ess"))
-    val meta = Map(Path("params") -> ValueString(Json.toJson(params).toString())) //Map.empty[Path, Value]
+    val meta = Map.empty[Path, Value]
 
     val latestKvs = Map(
       EssMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
@@ -147,7 +167,7 @@ object EndpointBuilders {
       EssMapping.capacity -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kWh"))),
       EssMapping.efficiency -> tsDouble(0.0, now),
       EssMapping.chargeRateTarget -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputTargetType)), meta = Map(Path("unit") -> ValueString("kW"))),
-      EssMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType))))
+      EssMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType)), meta = Map(faultMappingKv)))
 
     val setModeMetadata = Map(Path("simpleInputType") -> ValueString("integer"), modeMapKv)
 
@@ -172,7 +192,7 @@ object EndpointBuilders {
     val timeSeries = Map(
       PvMapping.pvOutputPower -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
       PvMapping.pvCapacity -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
-      PvMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType))))
+      PvMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType)), meta = Map(faultMappingKv)))
 
     val outputs = Map(
       PvMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
