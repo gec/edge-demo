@@ -37,6 +37,8 @@ object ChpMapping {
   val powerTarget = Path("OutTarget")
   val powerCapacity = Path("PowerCapacity")
 
+  val params = Path("Params")
+
   val setTarget = Path("SetOutTarget")
 
   val faultStatus = Path("FaultStatus")

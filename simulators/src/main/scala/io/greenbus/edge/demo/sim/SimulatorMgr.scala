@@ -42,11 +42,13 @@ class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord) extends LazyLo
   private val ess1 = new EssSim(essParams, EssSim.EssState(EssSim.Constant, 0.5 * essParams.capacity, 0.0, 0.0, false))
   publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, ess1, "ESS1", EndpointBuilders.buildEss(essParams))
 
-  private val chp1 = new ChpSim(ChpParams.basic, ChpSim.ChpState(0.0, 0.0, false))
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, chp1, "CHP1", EndpointBuilders.buildChp())
+  private val chpParams = ChpParams.basic
+  private val chp1 = new ChpSim(chpParams, ChpSim.ChpState(0.0, 0.0, false))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, chp1, "CHP1", EndpointBuilders.buildChp(chpParams))
 
-  private val load1 = new LoadSim(LoadMapping.defaultParams, load, LoadSim.LoadState(0))
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, load1, "LOAD1", EndpointBuilders.buildLoad())
+  private val loadParams = LoadMapping.defaultParams
+  private val load1 = new LoadSim(loadParams, load, LoadSim.LoadState(0))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, load1, "LOAD1", EndpointBuilders.buildLoad(loadParams))
 
   private val pccBkr = new BreakerSim(true)
   publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pccBkr, "PCC_BKR", EndpointBuilders.buildBreaker(pcc = true))

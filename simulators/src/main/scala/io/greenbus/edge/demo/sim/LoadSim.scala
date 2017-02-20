@@ -36,6 +36,9 @@ object LoadMapping {
   val voltage = Path("Voltage")
   val current = Path("Current")
   val kvar = Path("kvar")
+
+  val params = Path("Params")
+
   val pointTypes = Seq(power, voltage, current, kvar)
 
   val commandTypes = Seq()

@@ -50,18 +50,6 @@ object EndpointBuilders {
   val outputTargetType = "outputTarget"
   val bkrStatusType = "breakerStatus"
 
-  /*
-
-  val bkrPower = Path("DemandPower")
-  val bkrVoltage = Path("PCCVoltage")
-  val bkrCurrent = Path("PCCCurrent")
-  //val bkrFrequency = Path("Frequency")
-
-  val bkrStatus = Path("BreakerStatus")
-
-  val bkrTrip = Path("BreakerTrip")
-  val bkrClose = Path("BreakerClose")
-   */
   def buildBreaker(pcc: Boolean): ClientEndpointPublisherDesc = {
     val now = System.currentTimeMillis()
 
@@ -84,12 +72,14 @@ object EndpointBuilders {
     ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
   }
 
-  def buildLoad(): ClientEndpointPublisherDesc = {
+  def buildLoad(params: LoadParams): ClientEndpointPublisherDesc = {
     val now = System.currentTimeMillis()
 
     val indexes = Map(Path("gridDeviceType") -> ValueSimpleString("load"))
     val meta = Map.empty[Path, Value]
-    val latestKvs = Map.empty[Path, LatestKeyValueEntry]
+
+    val latestKvs = Map(
+      LoadMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
 
     val timeSeries = Map(
       LoadMapping.power -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
@@ -102,12 +92,14 @@ object EndpointBuilders {
     ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
   }
 
-  def buildChp(): ClientEndpointPublisherDesc = {
+  def buildChp(params: ChpParams): ClientEndpointPublisherDesc = {
     val now = System.currentTimeMillis()
 
     val indexes = Map(Path("gridDeviceType") -> ValueSimpleString("gen"))
     val meta = Map.empty[Path, Value]
-    val latestKvs = Map.empty[Path, LatestKeyValueEntry]
+
+    val latestKvs = Map(
+      ChpMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
 
     val timeSeries = Map(
       ChpMapping.power -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
@@ -128,7 +120,8 @@ object EndpointBuilders {
     val indexes = Map(Path("gridDeviceType") -> ValueSimpleString("ess"))
     val meta = Map(Path("params") -> ValueString(Json.toJson(params).toString())) //Map.empty[Path, Value]
 
-    val latestKvs = Map.empty[Path, LatestKeyValueEntry]
+    val latestKvs = Map(
+      EssMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
 
     val modeMapping = ValueArray(Vector(
       ValueObject(Map(

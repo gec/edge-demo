@@ -36,6 +36,8 @@ object EssMapping {
   val chargeRateTarget = Path("ChargeRateTarget")
   val faultStatus = Path("FaultStatus")
 
+  val params = Path("Params")
+
   val pointTypes = Seq(percentSoc, socMax, socMin, chargeDischargeRate, chargeRateMax, dischargeRateMax, capacity, efficiency, chargeRateTarget, mode, faultStatus)
 
   val setChargeRate = Path("SetChargeRateTarget")
@@ -126,19 +128,18 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
   def currentState: EssState = state
 
   def updates(line: LineState, time: Long): Seq[SimUpdate] = {
-    import EssMapping._
     Seq(
-      TimeSeriesUpdate(percentSoc, ValueDouble(EssSim.calcSoc(params, state))),
-      TimeSeriesUpdate(socMax, ValueDouble(params.socMax)),
-      TimeSeriesUpdate(socMin, ValueDouble(params.socMin)),
-      TimeSeriesUpdate(chargeDischargeRate, ValueDouble(state.output)),
-      TimeSeriesUpdate(chargeRateMax, ValueDouble(params.maxChargeRate)),
-      TimeSeriesUpdate(dischargeRateMax, ValueDouble(params.maxDischargeRate)),
-      TimeSeriesUpdate(capacity, ValueDouble(params.capacity)),
-      TimeSeriesUpdate(efficiency, ValueDouble(params.efficiency)),
-      TimeSeriesUpdate(chargeRateTarget, ValueDouble(state.target)),
-      TimeSeriesUpdate(mode, ValueUInt64(state.mode.numeric)),
-      TimeSeriesUpdate(faultStatus, ValueBool(state.fault)))
+      TimeSeriesUpdate(EssMapping.percentSoc, ValueDouble(EssSim.calcSoc(params, state))),
+      TimeSeriesUpdate(EssMapping.socMax, ValueDouble(params.socMax)),
+      TimeSeriesUpdate(EssMapping.socMin, ValueDouble(params.socMin)),
+      TimeSeriesUpdate(EssMapping.chargeDischargeRate, ValueDouble(state.output)),
+      TimeSeriesUpdate(EssMapping.chargeRateMax, ValueDouble(params.maxChargeRate)),
+      TimeSeriesUpdate(EssMapping.dischargeRateMax, ValueDouble(params.maxDischargeRate)),
+      TimeSeriesUpdate(EssMapping.capacity, ValueDouble(params.capacity)),
+      TimeSeriesUpdate(EssMapping.efficiency, ValueDouble(params.efficiency)),
+      TimeSeriesUpdate(EssMapping.chargeRateTarget, ValueDouble(state.target)),
+      TimeSeriesUpdate(EssMapping.mode, ValueUInt64(state.mode.numeric)),
+      TimeSeriesUpdate(EssMapping.faultStatus, ValueBool(state.fault)))
   }
 
   def handlers: Map[Path, (Option[Value]) => Boolean] = {
