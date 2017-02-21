@@ -648,10 +648,12 @@ angular.module('edgeGui', [ 'ngRoute' ])
     var name = $routeParams.name;
 
     var namePath = stringToPath(name);
+    console.log("namePath");
     console.log(namePath);
 
     $scope.name = name;
     $scope.namePath = namePath;
+    $scope.nameParts = namePath.part;
     //$scope.dataTable = [];
     //$scope.outputTable = [];
 
@@ -859,6 +861,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
       $scope.name = name;
       $scope.namePath = namePath;
+      $scope.nameParts = namePath.part;
 
       $scope.dataMap = {};
       $scope.timeSeriesArray = null;
@@ -1016,6 +1019,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
            snap.entries.forEach(function(elem) {
                 arr.push({
                     simpleName: endpointIdToString(elem.endpointId),
+                    nameParts: elem.endpointId.namedId.name.part,
                     endpointId: elem.endpointId
                 })
            });

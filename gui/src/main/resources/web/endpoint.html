@@ -20,7 +20,12 @@
 -->
 
 
-<h1 class="page-header">{{name}}</h1>
+<h1 class="page-header">
+    <span ng-repeat="part in nameParts">
+        <span ng-if="!$last"><small>{{part}} /</small></span>
+        <span ng-if="$last"><strong>{{part}}</strong></span>
+    </span>
+</h1>
 <ul class="nav nav-tabs">
     <li role="presentation" class="active"><a href="#">Data</a></li>
     <li role="presentation"><a href="#/endpointdesc?name={{name}}">Description</a></li>
