@@ -245,6 +245,80 @@ var connectionService = function(){
     };
 }();
 
+var outputHelpers = function() {
+
+    return {
+        issueDoubleOutput : function(key, outputObj) {
+
+            console.log("issueDoubleOutput");
+            console.log(key);
+            console.log(outputObj);
+
+            var outputValue = Number(outputObj.userOutput);
+
+            var endPath = {
+                endpointId: endpointIdForName(outputObj.endpointId),
+                key: outputObj.key
+            };
+
+            var params = {
+                output_value: {
+                    double_value: outputValue
+                }
+            };
+
+            connectionService.outputRequest(endPath, params, function(result) {
+                console.log("RESULT:")
+                console.log(result);
+            });
+        },
+
+       issueIndicationOutput : function(key, outputObj) {
+
+            console.log("issueIndicationOutput");
+            console.log(key);
+            console.log(outputObj);
+
+            var endPath = {
+                endpointId: endpointIdForName(outputObj.endpointId),
+                key: outputObj.key
+            };
+
+            var params = {};
+
+            connectionService.outputRequest(endPath, params, function(result) {
+                console.log("RESULT:")
+                console.log(result);
+            });
+        },
+
+        issueIntegerOutput : function(key, outputObj) {
+
+            console.log("issueIntegerOutput");
+            console.log(key);
+            console.log(outputObj);
+
+            var outputValue = Number(outputObj.userOutput);
+
+            var endPath = {
+                endpointId: endpointIdForName(outputObj.endpointId),
+                key: outputObj.key
+            };
+
+            var params = {
+                output_value: {
+                    sint64_value: outputValue
+                }
+            };
+
+            connectionService.outputRequest(endPath, params, function(result) {
+                console.log("RESULT:")
+                console.log(result);
+            });
+        },
+    }
+}();
+
 var endpointInfo = function(id, desc) {
 
     var indexes = {}
@@ -625,74 +699,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
         $scope.$digest();
     });
 
-    $scope.issueDoubleOutput = function(key, outputObj) {
-
-        console.log("issueDoubleOutput");
-        console.log(key);
-        console.log(outputObj);
-
-        var outputValue = Number(outputObj.userOutput);
-
-        var endPath = {
-            endpointId: endpointIdForName(outputObj.endpointId),
-            key: outputObj.key
-        };
-
-        var params = {
-            output_value: {
-                double_value: outputValue
-            }
-        };
-
-        connectionService.outputRequest(endPath, params, function(result) {
-            console.log("RESULT:")
-            console.log(result);
-        });
-    };
-
-    $scope.issueIndicationOutput = function(key, outputObj) {
-
-        console.log("issueIndicationOutput");
-        console.log(key);
-        console.log(outputObj);
-
-        var endPath = {
-            endpointId: endpointIdForName(outputObj.endpointId),
-            key: outputObj.key
-        };
-
-        var params = {};
-
-        connectionService.outputRequest(endPath, params, function(result) {
-            console.log("RESULT:")
-            console.log(result);
-        });
-    };
-
-    $scope.issueIntegerOutput = function(key, outputObj) {
-
-        console.log("issueIntegerOutput");
-        console.log(key);
-        console.log(outputObj);
-
-        var outputValue = Number(outputObj.userOutput);
-
-        var endPath = {
-            endpointId: endpointIdForName(outputObj.endpointId),
-            key: outputObj.key
-        };
-
-        var params = {
-            output_value: {
-                sint64_value: outputValue
-            }
-        };
-
-        connectionService.outputRequest(endPath, params, function(result) {
-            console.log("RESULT:")
-            console.log(result);
-        });
-    };
+    $scope.outputs = outputHelpers;
 
     var dataMap = {};
     //var outputMap = {};

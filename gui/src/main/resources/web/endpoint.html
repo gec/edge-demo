@@ -172,7 +172,7 @@
             <thead>
             <tr>
                 <th>Name</th>
-                <th style="text-align: right">Thing</th>
+                <th style="text-align: right">Output</th>
             </tr>
             </thead>
             <tbody>
@@ -180,12 +180,12 @@
                 <td>{{key}}</td>
                 <!--<td style="text-align: right">{{value}}</td>-->
                 <td ng-if="value.inputDef && value.inputDef.type === 'indication'" style="text-align: right">
-                    <button type="button" class="btn btn-default" ng-click="issueIndicationOutput(key, value)">
+                    <button type="button" class="btn btn-default" ng-click="outputs.issueIndicationOutput(key, value)">
                         <span class="glyphicon glyphicon-circle-arrow-down" aria-hidden="true"></span>
                     </button>
                 </td>
                 <td ng-if="value.inputDef && value.inputDef.type === 'integer' && value.inputDef.mapping" style="text-align: right">
-                    <select class="pull-right" name="singleSelect" id="singleSelect" ng-model="value.userOutput" ng-change="issueIntegerOutput(key, value)">
+                    <select class="pull-right" name="singleSelect" id="singleSelect" ng-model="value.userOutput" ng-change="outputs.issueIntegerOutput(key, value)">
                         <option value="">--- select mode ---</option>
                         <option ng-repeat="map in value.inputDef.mapping" value="{{map.index}}">{{map.name}}</option>
                     </select>
@@ -193,7 +193,7 @@
                 <td ng-if="value.inputDef && value.inputDef.type === 'integer' && !value.inputDef.mapping" style="text-align: right">
                     <div class="input-group pull-right">
                         <input type="text" class="form-control ng-pristine ng-valid ng-valid-pattern" ng-model="value.userOutput" name="setpoint_value" ng-pattern="pattern" style="width:6em;" placeholder="integer">
-                        <button type="button" class="btn btn-primary" ng-click="issueIntegerOutput(key, value)" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                        <button type="button" class="btn btn-primary" ng-click="outputs.issueIntegerOutput(key, value)" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
                             Set
                             <span style="padding-right: 0.5em;"> </span><i ng-class="executeClasses" class="fa fa-sign-in"></i>
                         </button>
@@ -202,7 +202,7 @@
                 <td ng-if="value.inputDef && value.inputDef.type === 'double'" style="text-align: right">
                     <div class="input-group pull-right">
                         <input type="text" class="form-control ng-pristine ng-valid ng-valid-pattern" ng-model="value.userOutput" name="setpoint_value" ng-pattern="pattern" style="width:6em;" placeholder="decimal">
-                        <button type="button" class="btn btn-primary" ng-click="issueDoubleOutput(key, value)" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                        <button type="button" class="btn btn-primary" ng-click="outputs.issueDoubleOutput(key, value)" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
                             Set
                             <span style="padding-right: 0.5em;"> </span><i ng-class="executeClasses" class="fa fa-sign-in"></i>
                         </button>
