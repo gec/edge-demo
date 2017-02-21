@@ -22,7 +22,7 @@ import com.typesafe.scalalogging.LazyLogging
 import io.greenbus.edge.client._
 import io.greenbus.edge._
 
-class SimulatorPublisherPair(eventThread: CallMarshaller, sim: SimulatorComponent, endId: String, desc: ClientEndpointPublisherDesc) {
+class SimulatorPublisherPair(eventThread: CallMarshaller, sim: SimulatorComponent, endId: Path, desc: ClientEndpointPublisherDesc) {
   private val id = NamedEndpointId(endId)
   private val endpoint = new EndpointPublisherImpl(eventThread, id, desc)
   def simulator: SimulatorComponent = sim
@@ -30,31 +30,31 @@ class SimulatorPublisherPair(eventThread: CallMarshaller, sim: SimulatorComponen
   def publisher: EndpointPublisher = endpoint
 }
 
-class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord) extends LazyLogging {
+class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord, ctx: SimulatorContext) extends LazyLogging {
 
   private var publisherPairs = Vector.empty[SimulatorPublisherPair]
 
   private val pvParams = PvParams.basic
   private val pv1 = new PvSim(pvParams, PvSim.PvState(1.0, fault = false))
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pv1, "PV1", EndpointBuilders.buildPv(pvParams))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pv1, Path(ctx.equipmentPrefix :+ "PV"), EndpointBuilders.buildPv(pvParams))
 
   private val essParams = EssParams.basic
   private val ess1 = new EssSim(essParams, EssSim.EssState(EssSim.Constant, 0.5 * essParams.capacity, 0.0, 0.0, false))
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, ess1, "ESS1", EndpointBuilders.buildEss(essParams))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, ess1, Path(ctx.equipmentPrefix :+ "ESS"), EndpointBuilders.buildEss(essParams))
 
   private val chpParams = ChpParams.basic
   private val chp1 = new ChpSim(chpParams, ChpSim.ChpState(0.0, 0.0, false))
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, chp1, "CHP1", EndpointBuilders.buildChp(chpParams))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, chp1, Path(ctx.equipmentPrefix :+ "CHP"), EndpointBuilders.buildChp(chpParams))
 
   private val loadParams = LoadMapping.defaultParams
   private val load1 = new LoadSim(loadParams, load, LoadSim.LoadState(0))
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, load1, "LOAD1", EndpointBuilders.buildLoad(loadParams))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, load1, Path(ctx.equipmentPrefix :+ "Load"), EndpointBuilders.buildLoad(loadParams))
 
   private val pccBkr = new BreakerSim(true)
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pccBkr, "PCC_BKR", EndpointBuilders.buildBreaker(pcc = true))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pccBkr, Path(ctx.equipmentPrefix :+ "PCC_BKR"), EndpointBuilders.buildBreaker(pcc = true))
 
   private val custBkr = new BreakerSim(true)
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pccBkr, "CUST_BKR", EndpointBuilders.buildBreaker(pcc = false))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pccBkr, Path(ctx.equipmentPrefix :+ "CUST_BKR"), EndpointBuilders.buildBreaker(pcc = false))
 
   private val simulator = new Simulator(
     SimulatorState(0.0, 0.0, 0.0, 0.0),

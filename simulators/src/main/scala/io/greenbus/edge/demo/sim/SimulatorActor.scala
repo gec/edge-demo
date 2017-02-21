@@ -33,16 +33,16 @@ object SimulatorActor {
   case class Connected(conn: EdgeConnection)
   case object Tick
 
-  def props(): Props = {
-    Props[SimulatorActor]()
+  def props(ctx: SimulatorContext): Props = {
+    Props(classOf[SimulatorActor], ctx)
   }
 
 }
-class SimulatorActor extends Actor with CallMarshalActor with LazyLogging {
+class SimulatorActor(ctx: SimulatorContext) extends Actor with CallMarshalActor with LazyLogging {
   import SimulatorActor._
 
   private val sessionId = PersistenceSessionId(UUID.randomUUID(), 0)
-  private val mgr = new SimulatorMgr(marshaller, LoadParser.fromFile("data/olney-2014-load-hourly.tsv"))
+  private val mgr = new SimulatorMgr(marshaller, LoadParser.fromFile("data/olney-2014-load-hourly.tsv"), ctx)
   private val publishers = mgr.publishers
 
   self ! DoSetup

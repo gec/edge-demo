@@ -47,9 +47,14 @@ object EdgeSimulators {
     val akkaConfig = slf4jConfig.withFallback(rootConfig)
     val system = ActorSystem("brokerTest", akkaConfig)
 
-    val sim = system.actorOf(SimulatorActor.props())
+    val ctx = SimulatorContext(
+      equipmentPrefix = Seq("Rankin", "MGRID"))
+
+    val sim = system.actorOf(SimulatorActor.props(ctx))
 
     sim ! SimulatorActor.Connected(edgeConnection)
 
   }
 }
+
+case class SimulatorContext(equipmentPrefix: Seq[String])

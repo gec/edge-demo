@@ -79,86 +79,13 @@
         <div class="row">
             <div class="col-md-3 sidebar">
                 <ul class="nav nav-sidebar">
-                    <li ng-repeat="elem in manifest"><a ng-href="#/endpoint/{{elem.endpointId.namedId.name}}">{{elem.endpointId.namedId.name}}</a></li>
-                    <!--<li class="active"><a href="#">Overview <span class="sr-only">(current)</span></a></li>
-                    <li><a href="#">Reports</a></li>
-                    <li><a href="#">Analytics</a></li>
-                    <li><a href="#">Export</a></li>-->
+                    <li ng-repeat="elem in manifest"><a ng-href="#/endpoint?name={{elem.simpleName}}">{{elem.simpleName}}</a></li>
                 </ul>
             </div>
             <div class="col-md-9">
 
                 <div ng-view></div>
             </div>
-
-            <!--
-
-        <div class="col-md-6" ng-repeat="device in deviceTypes.reclosers">
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              <h4 style="margin-bottom: .3em;margin-top: .3em;">Recloser: {{ device.name }} </h4>
-            </div>
-            <table class="table table-condensed">
-              <tbody>
-                <tr>
-                  <td>Is Closed</td>
-                  <td class="value">{{ device.isClosed }}</td>
-                  <td></td>
-                </tr>
-                <tr>
-                  <td>Control</td>
-                  <td class="value">
-                    <div class="btn-group" role="group" aria-label="...">
-                      <button type="button" class="btn btn-default" ng-click="controlRecloser(device, 'trip')">Trip</button>
-                      <button type="button" class="btn btn-default" ng-click="controlRecloser(device, 'close')">Close</button>
-                    </div>
-                    <div class="clearfix"></div>
-                    <span class="text-danger pull-right" ng-show="device.controlError">{{ device.controlError }}</span>
-                  </td>
-                  <td class="text-muted"></td>
-                </tr>
-                <tr>
-                  <td>Power Flow                     <small>(export neg.)</small>
-                  </td>
-                  <td class="value">{{ device.power | number:1 }}</td>
-                  <td class="text-muted">kW</td>
-                </tr>
-                <tr>
-                  <td>Voltage</td>
-                  <td class="value">{{ device.voltage | number:1 }}</td>
-                  <td class="text-muted">V</td>
-                </tr>
-                <tr>
-                  <td>Frequency</td>
-                  <td class="value">{{ device.frequency | number:2 }}</td>
-                  <td class="text-muted">Hz</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-            -->
-
-           <!-- <div class="col-sm-3 col-md-2 sidebar">
-                <ul class="nav nav-sidebar">
-                    <li class="active"><a href="#">Overview <span class="sr-only">(current)</span></a></li>
-                    <li><a href="#">Reports</a></li>
-                    <li><a href="#">Analytics</a></li>
-                    <li><a href="#">Export</a></li>
-                </ul>
-            </div>
-            <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-                <h1 class="page-header">Dashboard</h1>
-
-                <div>
-                    <h1>Work in progress...</h1>
-                    <p>{{manifest}}</p>
-                    <p><a href="#/main/">main</a></p>
-                    <p><a href="#/other/">other</a></p>
-                </div>
-
-                <div ng-view></div>
-            </div>-->
         </div>
     </div>
 

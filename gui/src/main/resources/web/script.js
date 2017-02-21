@@ -65,11 +65,21 @@ function sampleValueToSimpleValue(v) {
     }
 }
 
+function endpointIdForPath(path) {
+    return { namedId: { name: path } };
+}
 function endpointIdForName(name) {
-    return { namedId: { name: name } };
+    return { namedId: { name: stringToPath(name) } };
 }
 function endpointIdToString(id) {
-    return id.namedId.name;
+    return pathToString(id.namedId.name);
+}
+
+function stringToPath(str) {
+    var arr = str.split('/');
+    return {
+        part: arr
+    }
 }
 
 function pathToString(path) {
@@ -81,7 +91,9 @@ function pathToString(path) {
             result = result + "/";
         }
         result = result + elem;
+        i += 1;
     })
+    console.log(result);
     return result;
 }
 
@@ -616,7 +628,7 @@ var outputObject = function(endpointId, key, desc) {
 angular.module('edgeGui', [ 'ngRoute' ])
     .config(function($routeProvider, $locationProvider) {
         $routeProvider
-            .when('/endpoint/:name', { templateUrl: "endpoint.html", controller: 'edgeEndpointController' })
+            .when('/endpoint', { templateUrl: "endpoint.html", controller: 'edgeEndpointController' })
             .when('/main', { templateUrl: "main.html", controller: 'edgeMainController'  })
             .otherwise('/main')
     })
@@ -633,7 +645,12 @@ angular.module('edgeGui', [ 'ngRoute' ])
     console.log($routeParams);
 
     var name = $routeParams.name;
+
+    var namePath = stringToPath(name);
+    console.log(namePath);
+
     $scope.name = name;
+    $scope.namePath = namePath;
     //$scope.dataTable = [];
     //$scope.outputTable = [];
 
@@ -707,7 +724,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
     var keySub = null;
 
     var infoParams = {
-        infoSubscription: [ endpointIdForName(name) ]
+        infoSubscription: [ endpointIdForPath(namePath) ]
     }
     var infoSub = connectionService.subscribe(infoParams, function(msg) {
         console.log("got info: ");
@@ -870,10 +887,19 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
     var onSetSnapshot = function(snap) {
         console.log("on set snapshot");
+        console.log(snap);
         var arr = []
         if (snap.entries != null) {
-           $scope.manifest = snap.entries;
+           //$scope.manifest = snap.entries;
+           snap.entries.forEach(function(elem) {
+                arr.push({
+                    simpleName: endpointIdToString(elem.endpointId),
+                    endpointId: elem.endpointId
+                })
+           });
         }
+
+        $scope.manifest = arr;
     }
 
 });
