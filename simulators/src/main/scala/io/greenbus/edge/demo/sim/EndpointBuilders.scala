@@ -78,6 +78,8 @@ object EndpointBuilders {
     val indexes = Map(Path("gridDeviceType") -> ValueSimpleString(gridType))
     val meta = Map.empty[Path, Value]
     val latestKvs = Map.empty[Path, LatestKeyValueEntry]
+    val events = Map.empty[Path, EventEntry]
+    val activeSets = Map.empty[Path, ActiveSetConfigEntry]
 
     val timeSeries = Map(
       BreakerMapping.bkrPower -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
@@ -89,7 +91,7 @@ object EndpointBuilders {
       BreakerMapping.bkrTrip -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString(s"${gridType}Trip")), Map(Path("simpleInputType") -> ValueString("indication")))),
       BreakerMapping.bkrClose -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString(s"${gridType}Close")), Map(Path("simpleInputType") -> ValueString("indication")))))
 
-    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
+    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, events, activeSets, outputs)
   }
 
   def buildLoad(params: LoadParams): ClientEndpointPublisherDesc = {
@@ -101,6 +103,9 @@ object EndpointBuilders {
     val latestKvs = Map(
       LoadMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
 
+    val events = Map.empty[Path, EventEntry]
+    val activeSets = Map.empty[Path, ActiveSetConfigEntry]
+
     val timeSeries = Map(
       LoadMapping.power -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
       LoadMapping.voltage -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kV"))),
@@ -109,7 +114,7 @@ object EndpointBuilders {
 
     val outputs = Map.empty[Path, OutputEntry]
 
-    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
+    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, events, activeSets, outputs)
   }
 
   def buildChp(params: ChpParams): ClientEndpointPublisherDesc = {
@@ -121,6 +126,9 @@ object EndpointBuilders {
     val latestKvs = Map(
       ChpMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
 
+    val events = Map.empty[Path, EventEntry]
+    val activeSets = Map.empty[Path, ActiveSetConfigEntry]
+
     val timeSeries = Map(
       ChpMapping.power -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
       ChpMapping.powerCapacity -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
@@ -131,7 +139,7 @@ object EndpointBuilders {
       ChpMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
       ChpMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))))
 
-    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
+    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, events, activeSets, outputs)
   }
 
   def buildEss(params: EssParams): ClientEndpointPublisherDesc = {
@@ -142,6 +150,9 @@ object EndpointBuilders {
 
     val latestKvs = Map(
       EssMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
+
+    val events = Map.empty[Path, EventEntry]
+    val activeSets = Map.empty[Path, ActiveSetConfigEntry]
 
     val modeMapping = ValueArray(Vector(
       ValueObject(Map(
@@ -177,7 +188,7 @@ object EndpointBuilders {
       EssMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
       EssMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))))
 
-    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
+    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, events, activeSets, outputs)
   }
 
   def buildPv(params: PvParams): ClientEndpointPublisherDesc = {
@@ -189,6 +200,9 @@ object EndpointBuilders {
     val latestKvs = Map(
       PvMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
 
+    val events = Map.empty[Path, EventEntry]
+    val activeSets = Map.empty[Path, ActiveSetConfigEntry]
+
     val timeSeries = Map(
       PvMapping.pvOutputPower -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
       PvMapping.pvCapacity -> tsDouble(0.0, now, meta = Map(Path("unit") -> ValueString("kW"))),
@@ -198,7 +212,7 @@ object EndpointBuilders {
       PvMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
       PvMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))))
 
-    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, outputs)
+    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, events, activeSets, outputs)
   }
 
 }
