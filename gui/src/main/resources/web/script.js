@@ -629,6 +629,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
     .config(function($routeProvider, $locationProvider) {
         $routeProvider
             .when('/endpoint', { templateUrl: "endpoint.html", controller: 'edgeEndpointController' })
+            .when('/endpointdesc', { templateUrl: "endpointdesc.html", controller: 'edgeEndpointDescController' })
             .when('/main', { templateUrl: "main.html", controller: 'edgeMainController'  })
             .otherwise('/main')
     })
@@ -847,6 +848,127 @@ angular.module('edgeGui', [ 'ngRoute' ])
     });
 
   })
+  .controller('edgeEndpointDescController', function($scope, $routeParams, $http, $interval, $location) {
+      console.log("endpoint desc controller for " + $routeParams);
+      console.log($routeParams);
+
+      var name = $routeParams.name;
+
+      var namePath = stringToPath(name);
+      console.log(namePath);
+
+      $scope.name = name;
+      $scope.namePath = namePath;
+
+      $scope.dataMap = {};
+      $scope.timeSeriesArray = null;
+      $scope.latestKeyValueArray = null;
+
+      $scope.outputMap = {};
+
+      $scope.endpointInfo = null;
+
+
+      $scope.valueIsComplex = function(v) {
+          return typeof v === 'object';
+      }
+      $scope.valueIsLong = function(v, len) {
+          return typeof v === 'string' && v.length > len
+      }
+
+      $('#metadataModal').on('show.bs.modal', function (event) {
+          console.log("saw modal event");
+          var button = $(event.relatedTarget); // Button that triggered the modal
+          $scope.modalKey = button.data('key');
+          $scope.$digest();
+      });
+
+      $scope.outputs = outputHelpers;
+
+      var dataMap = {};
+
+      var keySub = null;
+
+      var infoParams = {
+          infoSubscription: [ endpointIdForPath(namePath) ]
+      }
+      var infoSub = connectionService.subscribe(infoParams, function(msg) {
+          console.log("got info: ");
+          console.log(msg);
+
+          var dataKeys = [];
+          var outputKeys = [];
+
+          msg.descriptorNotification.forEach(function(descNot) {
+              console.log(descNot)
+              var dataKs = [];
+              var outputKs = [];
+              var endId = descNot.endpointId
+              var descriptor = descNot.endpointDescriptor;
+              if (descriptor != null && endId != null) {
+
+                  $scope.endpointInfo = endpointInfo(endId, descriptor);
+
+                  if (descriptor.dataKeySet != null) {
+                      descriptor.dataKeySet.forEach(function(elem) {
+                          console.log("ELEM:");
+                          console.log(elem);
+
+                          var indexes = {};
+                          var metadata = {};
+
+                          if (elem.value.indexes != null) {
+                              elem.value.indexes.forEach(function(kv) {
+                                  indexes[pathToString(kv.key)] = sampleValueToSimpleValue(kv.value);
+                              });
+                          }
+                          if (elem.value.metadata != null) {
+                              elem.value.metadata.forEach(function(kv) {
+                                  console.log(elem.metadata);
+                                  metadata[pathToString(kv.key)] = valueToJsValue(kv.value);
+                              });
+                          }
+
+                          var endPath = { endpointId: endId, key: elem.key }
+                          dataKs.push(endPath)
+
+                          var pathStr = pathToString(elem.key);
+                          var db = null;
+                          var existing = dataMap[pathStr];
+                          if (existing != null && existing.value != null) {
+                              db = existing.value
+                          }
+                          var data = dataObject(name, elem.key, elem.value, db);
+                          $scope.dataMap[pathStr] = data;
+                      });
+                  }
+                  if (descriptor.outputKeySet != null) {
+                      descriptor.outputKeySet.forEach(function(elem) {
+                          console.log(elem);
+
+                          var output = outputObject(name, elem.key, elem.value);
+                          $scope.outputMap[pathToString(elem.key)] = output;
+
+                          var endPath = { endpointId: endId, key: elem.key }
+                          outputKs.push(endPath)
+                      });
+                  }
+              }
+
+              dataKeys = dataKs;
+              outputKeys = outputKs;
+          });
+
+          $scope.$digest();
+      });
+
+
+      $scope.$on('$destroy', function() {
+          console.log("endpoint destroyed: " + name)
+          infoSub.remove();
+      });
+
+    })
   .controller('edgeGuiController', function($scope, $http, $interval, $location) {
     console.log("gui controller")
 

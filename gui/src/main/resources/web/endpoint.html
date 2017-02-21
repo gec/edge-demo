@@ -21,6 +21,10 @@
 
 
 <h1 class="page-header">{{name}}</h1>
+<ul class="nav nav-tabs">
+    <li role="presentation" class="active"><a href="#">Data</a></li>
+    <li role="presentation"><a href="#/endpointdesc?name={{name}}">Description</a></li>
+</ul>
 
 <div>
 
@@ -215,136 +219,4 @@
 </div>
 
 
-<div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><h4>Endpoint Descriptor: <h4><strong>{{name}}</strong></h4></h4></div>
-        <div class="panel-body">
-            <p ng-if="!endpointInfo">Loading...</p>
-
-            <div ng-if="endpointInfo">
-                <h4>Summary</h4>
-
-                <table class="table">
-                    <tbody>
-                    <tr>
-                        <td>Data Values</td>
-                        <td style="text-align: right">{{endpointInfo.dataCount}}</td>
-                    </tr>
-                    <tr>
-                        <td>Outputs</td>
-                        <td style="text-align: right">{{endpointInfo.outputCount}}</td>
-                    </tr>
-                    </tbody>
-                </table>
-
-                <h4>Indexes</h4>
-
-                <table class="table table-striped">
-                    <tbody>
-                    <tr ng-repeat="(key, value) in endpointInfo.indexes">
-                        <td><strong>{{key}}</strong></td>
-                        <td style="text-align: right"><code>{{value}}</code></td>
-                    </tr>
-                    </tbody>
-                </table>
-
-                <h4>Metadata</h4>
-                <table class="table table-striped">
-                    <tbody>
-                    <tr ng-repeat="(key, value) in endpointInfo.metadata">
-                        <td><strong>{{key}}</strong></td>
-                        <td style="text-align: right" ng-if="value.length <= 30"><code>{{value}}</code></td>
-                        <td style="text-align: right" ng-if="value.length > 30">
-                            <code>{{value | limitTo: 30}}</code> ...
-                            <button type="button" class="btn btn-default" data-toggle="modal" data-target="#metadataModal" data-key="{{key}}">
-                                <span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
-                            </button>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="panel panel-default" ng-repeat="(key, data) in dataMap">
-        <div class="panel-heading">Data Key: <h4>{{name}} / <strong>{{key}}</strong></h4></div>
-        <div class="panel-body">
-
-            <div>
-                <!--<h4>Type: </h4>-->
-
-                <div ng-if="data.indexes">
-                    <h4 style="text-align: right"><em>Indexes</em></h4>
-                    <table class="table table-striped">
-                        <tbody>
-                        <tr ng-repeat="(key, value) in data.indexes">
-                            <td><strong>{{key}}</strong></td>
-                            <td style="text-align: right"><code>{{value}}</code></td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div ng-if="data.metadata">
-                    <h4 style="text-align: right"><em>Metadata</em></h4>
-                    <table class="table table-striped">
-                        <tbody>
-                        <tr ng-repeat="(key, value) in data.metadata">
-                            <td><strong>{{key}}</strong></td>
-                            <td style="text-align: right" ng-if="value.length <= 30"><code>{{value}}</code></td>
-                            <td style="text-align: right" ng-if="value.length > 30">
-                                <code>{{value | limitTo: 30}}</code> ...
-                                <button type="button" class="btn btn-default" data-toggle="modal" data-target="#metadataModal" data-key="{{key}}">
-                                    <span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
-                                </button>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="panel panel-default" ng-repeat="(key, output) in outputMap">
-        <div class="panel-heading">Output Key: <h4>{{name}} / <strong>{{key}}</strong></h4></div>
-        <div class="panel-body">
-
-            <div>
-                <!--<h4>Type: </h4>-->
-
-                <div ng-if="output.indexes">
-                    <h4 style="text-align: right"><em>Indexes</em></h4>
-                    <table class="table table-striped">
-                        <tbody>
-                        <tr ng-repeat="(key, value) in output.indexes">
-                            <td><strong>{{key}}</strong></td>
-                            <td style="text-align: right"><code>{{value}}</code></td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div ng-if="output.metadata">
-                    <h4 style="text-align: right"><em>Metadata</em></h4>
-                    <table class="table table-striped">
-                        <tbody>
-                        <tr ng-repeat="(key, value) in output.metadata">
-                            <td><strong>{{key}}</strong></td>
-                            <td style="text-align: right" ng-if="value.length <= 30"><code>{{value}}</code></td>
-                            <td style="text-align: right" ng-if="value.length > 30">
-                                <code>{{value | limitTo: 30}}</code> ...
-                                <button type="button" class="btn btn-default" data-toggle="modal" data-target="#metadataModal" data-key="{{key}}">
-                                    <span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
-                                </button>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
