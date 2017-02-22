@@ -90,8 +90,8 @@ object EndpointBuilders {
       BreakerMapping.bkrStatus -> tsBool(true, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(bkrStatusType)), meta = Map(breakerStatusMappingKv)))
 
     val outputs = Map(
-      BreakerMapping.bkrTrip -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString(s"${gridType}Trip")), Map(Path("simpleInputType") -> ValueString("indication")))),
-      BreakerMapping.bkrClose -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString(s"${gridType}Close")), Map(Path("simpleInputType") -> ValueString("indication")))))
+      BreakerMapping.bkrTrip -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString(s"${gridType}Switch")), Map(Path("simpleInputType") -> ValueString("indication")))),
+      BreakerMapping.bkrClose -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString(s"${gridType}Switch")), Map(Path("simpleInputType") -> ValueString("indication")))))
 
     ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, events, activeSets, outputs)
   }

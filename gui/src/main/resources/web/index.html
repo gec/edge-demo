@@ -82,9 +82,9 @@
                     <!--<li ng-repeat="elem in manifest"><a ng-href="#/endpoint?name={{elem.simpleName}}">{{elem.simpleName}}</a></li>-->
                     <li ng-repeat="elem in manifest"><a ng-href="#/endpoint?name={{elem.simpleName}}">
                         <span ng-repeat="part in elem.nameParts">
-                        <span ng-if="!$last">{{part}} / </span>
-                        <span ng-if="$last"><strong>{{part}}</strong></span>
-                    </span>
+                            <span ng-if="!$last">{{part}} / </span>
+                            <span ng-if="$last"><strong>{{part}}</strong></span>
+                        </span>
                     </a>
                     </li>
 

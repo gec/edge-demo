@@ -74,6 +74,24 @@ function endpointIdForName(name) {
 function endpointIdToString(id) {
     return pathToString(id.namedId.name);
 }
+function endpointPathFromIdAndKey(endpointId, key) {
+    return {
+        endpointId: endpointId,
+        key: key
+    };
+}
+
+
+var endPathToObjKey = function(endPath) {
+    return endpointIdToString(endPath.endpointId) + '$' + pathToString(endPath.key);
+};
+var objKeyToEndPath = function(objKey) {
+    var split = objKey.split('$');
+    var endIdPath = stringToPath(split[0]);
+    var keyPath = stringToPath(split[1]);
+    return endpointPathFromIdAndKey(endIdForPath(endIdPath), keyPath);
+};
+
 
 function stringToPath(str) {
     var arr = str.split('/');
@@ -685,11 +703,96 @@ var outputObject = function(endpointId, key, desc) {
     return {
         endpointId: endpointId,
         key: key,
+        endpointPathString: endPathToObjKey(endpointPathFromIdAndKey(endpointId, key)),
         indexes: indexes,
         metadata: metadata,
         inputDef: inputDef
     };
 }
+
+
+var dataIndexSubscription = function(spec, dataHandler) {
+    var subParams = {
+        indexParams: {
+            data_key_indexes: [ spec ]
+        }
+    };
+    var sub = connectionService.subscribe(subParams, function(msg) {
+        console.log("got sub: ");
+        console.log(msg);
+
+        if (msg.indexNotification != null && msg.indexNotification.dataKeyNotifications != null) {
+            var not = msg.indexNotification.dataKeyNotifications
+            not.forEach(function(elem) {
+                if (elem.snapshot != null && elem.snapshot.endpointPaths != null) {
+                    var pathSet = elem.snapshot.endpointPaths
+                    onSetUpdate(pathSet);
+                }
+            });
+        }
+
+    });
+
+    var onSetUpdate = function(pathList) {
+        console.log("pathList:");
+        console.log(pathList);
+        var keyParams = {
+          dataSubscription: pathList
+        };
+        console.log("keyParams:");
+        console.log(keyParams);
+
+        keySub = connectionService.subscribe(keyParams, function(msg) {
+          //console.log("got data for: " + spec);
+          //console.log(msg);
+          dataHandler(msg, pathList);
+        });
+    }
+
+    return sub;
+};
+
+var outputIndexSubscription = function(spec, dataHandler) {
+    var subParams = {
+        indexParams: {
+            output_key_indexes: [ spec ]
+        }
+    };
+    var sub = connectionService.subscribe(subParams, function(msg) {
+        console.log("GOT OUTPUT SUB: ");
+        console.log(msg);
+
+        if (msg.indexNotification != null && msg.indexNotification.outputKeyNotifications != null) {
+            var not = msg.indexNotification.outputKeyNotifications
+            not.forEach(function(elem) {
+                if (elem.snapshot != null && elem.snapshot.endpointPaths != null) {
+                    var pathSet = elem.snapshot.endpointPaths
+                    onSetUpdate(pathSet);
+                }
+            });
+        }
+
+    });
+
+    var onSetUpdate = function(pathList) {
+        console.log("pathList:");
+        console.log(pathList);
+        var keyParams = {
+          outputSubscription: pathList
+        };
+        console.log("keyParams:");
+        console.log(keyParams);
+
+        keySub = connectionService.subscribe(keyParams, function(msg) {
+          console.log("got OUTPUT SUB FOR: " + spec);
+          console.log(msg);
+          dataHandler(msg, pathList);
+        });
+    }
+
+    return sub;
+};
+
 
 angular.module('edgeGui', [ 'ngRoute' ])
     .config(function($routeProvider, $locationProvider) {
@@ -702,8 +805,142 @@ angular.module('edgeGui', [ 'ngRoute' ])
   .controller('edgeMainController', function($scope, $http, $interval, $location) {
     console.log("main controller");
 
+    $scope.dataMap = {};
+    $scope.outputMap = {};
+
+    //$scope.outputPowerSet = []
+
+    var updateDataSet = function(name, pathList) {
+        var set = [];
+        pathList.forEach(function(endPath) {
+            var key = endPathToObjKey(endPath);
+            var dataObj = $scope.dataMap[key];
+            if (dataObj) {
+                set.push(dataObj)
+            }
+        });
+        if (set.length > 0) {
+            $scope[name] = set;
+        }
+    }
+
+    var updateOutputSet = function(name, pathList) {
+        var set = [];
+        pathList.forEach(function(endPath) {
+            var key = endPathToObjKey(endPath);
+            var outputObj = $scope.outputMap[key];
+            if (outputObj) {
+                set.push(outputObj)
+            }
+        });
+        if (set.length > 0) {
+            $scope[name] = set;
+        }
+    }
+
+    var handleNotification = function(msg) {
+        var dataNotification = msg.dataNotification;
+        if (dataNotification != null) {
+            dataNotification.forEach(function(elem) {
+
+                var endPath = elem.key;
+
+                if (elem.descriptorNotification != null) {
+                    var descNot = elem.descriptorNotification;
+                    //console.log("DESC:");
+                    //console.log(descNot);
+
+                    handleDataKeyNotification(descNot.endpointPath, descNot.keyDescriptor);
+                }
+
+                var dataMapKey = endPathToObjKey(endPath);
+                var dataObj = $scope.dataMap[dataMapKey];
+                if (dataObj != null) {
+                    //console.log("NOTIFICATION: ");
+                    //console.log(elem);
+                    dataObj.db.observe(elem.value);
+                }
+            });
+        }
+        var outputNotification = msg.outputNotification;
+        if (outputNotification != null) {
+            outputNotification.forEach(function(elem) {
+
+                var endPath = elem.key;
+                if (elem.descriptorNotification != null) {
+                    var descNot = elem.descriptorNotification;
+                    console.log("Output DESC:");
+                    console.log(descNot);
+
+                    handleOutputKeyNotification(descNot.endpointPath, descNot.keyDescriptor);
+                }
+            });
+        }
+
+        $scope.$digest();
+    };
+
+
+    var handleDataKeyNotification = function(endPath, keyDescriptor) {
+
+        var dataMapKey = endPathToObjKey(endPath);
+
+        var db = null;
+        var existing = $scope.dataMap[dataMapKey];
+        if (existing != null && existing.value != null) {
+            db = existing.value
+        }
+        var data = dataObject(endPath.endpointId, endPath.key, keyDescriptor, db);
+
+        $scope.dataMap[dataMapKey] = data;
+    }
+
+
+    var handleOutputKeyNotification = function(endPath, keyDescriptor) {
+        console.log("handleOutputKeyNotification")
+
+        var dataMapKey = endPathToObjKey(endPath);
+
+        var output = outputObject(endPath.endpointId, endPath.key, keyDescriptor);
+        $scope.outputMap[dataMapKey] = output;
+    }
+
+
+    var outputPowerSpec = {
+        key: { part: [ 'gridValueType' ] },
+        value: { stringValue: 'outputPower' }
+    };
+
+    var outputPowerSub = dataIndexSubscription(outputPowerSpec, function (msg, pathList) {
+        handleNotification(msg)
+        updateDataSet('outputPowerSet', pathList);
+    });
+
+    var breakerStatus = {
+        key: { part: [ 'gridValueType' ] },
+        value: { stringValue: 'breakerStatus' }
+    };
+
+    var breakerStatusSub = dataIndexSubscription(breakerStatus, function (msg, pathList) {
+        handleNotification(msg)
+        updateDataSet('breakerStatusSet', pathList);
+    });
+
+    var breakerOutputSpec = {
+        key: { part: [ 'gridOutputType' ] },
+        value: { stringValue: 'pccBkrSwitch' }
+    };
+
+    var breakerOutputSub = outputIndexSubscription(breakerOutputSpec, function (msg, pathList) {
+        console.log("saw notification: ");
+        console.log(msg);
+        handleNotification(msg)
+        updateOutputSet('breakerOutputSet', pathList);
+    });
+
+
     $scope.$on('$destroy', function() {
-        console.log("main destroyed: " + me)
+        console.log("main destroyed: ");
     });
 
   })
@@ -812,6 +1049,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
         var dataKeys = [];
         var outputKeys = [];
 
+
         msg.descriptorNotification.forEach(function(descNot) {
             console.log(descNot)
             var dataKs = [];
@@ -857,9 +1095,10 @@ angular.module('edgeGui', [ 'ngRoute' ])
                 }
                 if (descriptor.outputKeySet != null) {
                     descriptor.outputKeySet.forEach(function(elem) {
+                        console.log("OutELEM:");
                         console.log(elem);
 
-                        var output = outputObject(name, elem.key, elem.value);
+                        var output = outputObject(endId, elem.key, elem.value);
                         $scope.outputMap[pathToString(elem.key)] = output;
 
                         var endPath = { endpointId: endId, key: elem.key }
@@ -1023,7 +1262,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
                       descriptor.outputKeySet.forEach(function(elem) {
                           console.log(elem);
 
-                          var output = outputObject(name, elem.key, elem.value);
+                          var output = outputObject(endId, elem.key, elem.value);
                           $scope.outputMap[pathToString(elem.key)] = output;
 
                           var endPath = { endpointId: endId, key: elem.key }
