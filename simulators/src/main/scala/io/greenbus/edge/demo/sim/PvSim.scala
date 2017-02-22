@@ -18,7 +18,7 @@
  */
 package io.greenbus.edge.demo.sim
 
-import io.greenbus.edge.{ Path, SequencedValue, ValueString }
+import io.greenbus.edge.{ Path, SequencedValue, TopicEvent, ValueString }
 import play.api.libs.json.Json
 
 object EllipseParams {
@@ -47,6 +47,7 @@ object PvMapping {
   val faultStatus = Path("FaultStatus")
 
   val params = Path("Params")
+  val events = Path("Events")
 
   val faultEnable = Path("FaultEnable")
   val faultDisable = Path("FaultDisable")
@@ -83,6 +84,9 @@ class PvSim(params: PvParams, initialState: PvState) extends SimulatorComponent 
   private var paramsPublished = false
 
   def currentState: PvState = state
+
+  private val queue = new SimEventQueue
+  def eventQueue: EventQueue = queue
 
   def updates(line: LineState, time: Long): Seq[SimUpdate] = {
     val data = Seq(
@@ -122,6 +126,7 @@ class PvSim(params: PvParams, initialState: PvState) extends SimulatorComponent 
   }
 
   private def onFaultEnable(): Boolean = {
+    queue.enqueue(PvMapping.events, TopicEvent(Path(Seq("fault", "occur")), Some(ValueString("Fault occurred"))))
     if (!state.fault) {
       state = state.copy(fault = true)
       true
@@ -130,6 +135,7 @@ class PvSim(params: PvParams, initialState: PvState) extends SimulatorComponent 
     }
   }
   private def onFaultDisable(): Boolean = {
+    queue.enqueue(PvMapping.events, TopicEvent(Path(Seq("fault", "clear")), Some(ValueString("Fault cleared"))))
     if (state.fault) {
       state = state.copy(fault = false)
       true

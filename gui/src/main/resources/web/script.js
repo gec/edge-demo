@@ -93,7 +93,6 @@ function pathToString(path) {
         result = result + elem;
         i += 1;
     })
-    console.log(result);
     return result;
 }
 
@@ -376,6 +375,70 @@ var nullDb = function() {
     }
 }
 
+
+var eventDb = function(desc, indexes, metadata) {
+
+    var current = [];
+
+    /*var handleSeqValue = function(v) {
+        console.log("handleValue: ");
+        console.log(v);
+
+        var jsValue = valueToJsValue(v);
+        console.log("JSVALUE:");
+        console.log(jsValue);
+
+        current = {
+            type: 'latestKeyValue',
+            value: v,
+            jsValue: jsValue
+        };
+    };*/
+
+    var handleEvents = function(arr) {
+        arr.forEach(handleEvent);
+    };
+
+    var handleEvent = function(ev) {
+        current.push({
+            topicParts: ev.topic.part,
+            value: valueToJsValue(ev.value)
+        });
+        if (current.length > 100) {
+            current.shift();
+        }
+    };
+
+    return {
+        currentValue: function() {
+            return current;
+        },
+        observe: function(notification) {
+            console.log("EVENT notification: ");
+            console.log(notification);
+
+            if (notification.update != null) {
+                var update = notification.update;
+                if (update.topicEventUpdate != null) {
+                    var events = state.topicEventUpdate.events;
+                    if (events != null) {
+                        events.forEach(handleEvent);
+                    }
+                }
+
+            } else if (notification.state != null) {
+                var state = notification.state;
+                if (state.topicEventState != null) {
+                    var events = state.topicEventState.events;
+                    if (events != null) {
+                        events.forEach(handleEvent);
+                    }
+                }
+            }
+        }
+    }
+}
+
 var kvDb = function(kvDesc, indexes, metadata) {
 
     var current = null;
@@ -556,6 +619,9 @@ var dataObject = function(endpointId, key, desc, dbParam) {
         } else if (desc['latestKeyValue']) {
             db = kvDb(desc['latestKeyValue'], indexes, metadata);
             type = 'latestKeyValue';
+        } else if (desc['eventTopicValue']) {
+            db = eventDb(desc['eventTopicValue'], indexes, metadata);
+            type = 'eventTopicValue';
         } else {
             console.log("unhandled desc:")
             console.log(desc);
@@ -668,15 +734,20 @@ angular.module('edgeGui', [ 'ngRoute' ])
     var updateDataTables = function() {
         var ts = [];
         var kv = [];
+        var ev = [];
 
         for (var key in $scope.dataMap) {
             var data = $scope.dataMap[key]
             var type = data.type;
+            console.log("DATA:");
+            console.log(data);
             if (type != null) {
                 if (type === 'latestKeyValue') {
                     kv.push(data);
                 } else if (type === 'timeSeriesValue') {
                     ts.push(data);
+                } else if (type === 'eventTopicValue') {
+                    ev.push(data);
                 }
             }
         }
@@ -686,6 +757,9 @@ angular.module('edgeGui', [ 'ngRoute' ])
         }
         if (kv.length > 0) {
             $scope.latestKeyValueArray = kv;
+        }
+        if (ev.length > 0) {
+            $scope.eventTopicValueArray = ev;
         }
     };
 

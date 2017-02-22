@@ -61,6 +61,9 @@ class LoadSim(params: LoadParams, data: LoadRecord, initialState: LoadState) ext
 
   private var state = initialState
 
+  private val queue = new SimEventQueue
+  def eventQueue: EventQueue = queue
+
   def updateReductionStage(stage: Int): Unit = {
     state = state.copy(reductionStage = stage)
   }

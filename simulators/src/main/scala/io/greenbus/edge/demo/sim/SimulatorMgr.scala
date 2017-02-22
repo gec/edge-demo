@@ -112,6 +112,12 @@ class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord, ctx: Simulator
               publishersToFlush += pair.publisher
           }
       }
+      val events = pair.simulator.eventQueue.dequeue()
+      events.foreach {
+        case (path, topicEvent) =>
+          pair.publisher.eventStreams.get(path).foreach(_.push(topicEvent))
+          publishersToFlush += pair.publisher
+      }
     }
 
     publishersToFlush.foreach(_.flush())

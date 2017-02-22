@@ -29,4 +29,5 @@ case class SeqValueUpdate(path: Path, v: Value) extends SimUpdate
 trait SimulatorComponent {
   def updates(line: LineState, time: Long): Seq[SimUpdate]
   def handlers: Map[Path, Option[Value] => Boolean]
+  def eventQueue: EventQueue
 }

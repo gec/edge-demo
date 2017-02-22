@@ -18,7 +18,7 @@
  */
 package io.greenbus.edge.demo.sim
 
-import io.greenbus.edge.{ Path, Value, ValueBool, ValueDouble }
+import io.greenbus.edge._
 
 object BreakerMapping {
 
@@ -30,6 +30,7 @@ object BreakerMapping {
   //val bkrFrequency = Path("Frequency")
 
   val bkrStatus = Path("BreakerStatus")
+  val events = Path("Events")
 
   val bkrTrip = Path("BreakerTrip")
   val bkrClose = Path("BreakerClose")
@@ -41,6 +42,9 @@ object BreakerMapping {
 class BreakerSim(initial: Boolean) extends SimulatorComponent {
 
   private var bkrStatus: Boolean = initial
+
+  private val queue = new SimEventQueue
+  def eventQueue: EventQueue = queue
 
   def status: Boolean = bkrStatus
 
@@ -60,10 +64,12 @@ class BreakerSim(initial: Boolean) extends SimulatorComponent {
   }
 
   def handleTrip(): Boolean = {
+    queue.enqueue(BreakerMapping.events, TopicEvent(Path(Seq("breaker", "trip")), Some(ValueString("Breaker tripped"))))
     bkrStatus = false
     true
   }
   def handleClose(): Boolean = {
+    queue.enqueue(BreakerMapping.events, TopicEvent(Path(Seq("breaker", "close")), Some(ValueString("Breaker closed"))))
     bkrStatus = true
     true
   }

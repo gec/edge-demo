@@ -224,4 +224,39 @@
 </div>
 
 
+<div>
+    <h3>Events</h3>
+    <div class="table-responsive">
+        <table class="table">
+            <tbody>
+            <tr ng-repeat="data in eventTopicValueArray">
+                <td>{{data.name}}</td>
+                <td>
+                    <table class="table">
+                        <tr>
+                            <th>Topic</th>
+                            <th style="text-align: right">Value</th>
+                        </tr>
+                        <tbody>
+                        <tr ng-repeat="event in data.db.currentValue() | orderBy:'+':true">
+                            <td>
+                                <em>
+                                <span ng-repeat="part in event.topicParts">
+                                    <span ng-if="!$last">{{part}} / </span>
+                                    <span ng-if="$last">{{part}}</span>
+                                </span>
+                                </em>
+                            </td>
+                            <td style="text-align: right"><strong>{{event.value}}</strong></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
 </div>

@@ -18,7 +18,7 @@
  */
 package io.greenbus.edge.demo.sim
 
-import io.greenbus.edge.{ Path, Value, ValueBool, ValueDouble }
+import io.greenbus.edge._
 
 object ChpParams {
   import play.api.libs.json._
@@ -38,6 +38,7 @@ object ChpMapping {
   val powerCapacity = Path("PowerCapacity")
 
   val params = Path("Params")
+  val events = Path("Events")
 
   val setTarget = Path("SetOutTarget")
 
@@ -71,6 +72,9 @@ class ChpSim(params: ChpParams, initialState: ChpState) extends SimulatorCompone
   private var state = initialState
 
   def currentState: ChpState = state
+
+  private val queue = new SimEventQueue
+  def eventQueue: EventQueue = queue
 
   def updates(line: LineState, time: Long): Seq[SimUpdate] = {
     Seq(
@@ -112,6 +116,7 @@ class ChpSim(params: ChpParams, initialState: ChpState) extends SimulatorCompone
   }
 
   private def onFaultEnable(): Boolean = {
+    queue.enqueue(ChpMapping.events, TopicEvent(Path(Seq("fault", "occur")), Some(ValueString("Fault occurred"))))
     if (!state.fault) {
       state = state.copy(fault = true)
       true
@@ -120,6 +125,7 @@ class ChpSim(params: ChpParams, initialState: ChpState) extends SimulatorCompone
     }
   }
   private def onFaultDisable(): Boolean = {
+    queue.enqueue(ChpMapping.events, TopicEvent(Path(Seq("fault", "clear")), Some(ValueString("Fault cleared"))))
     if (state.fault) {
       state = state.copy(fault = false)
       true
@@ -129,6 +135,7 @@ class ChpSim(params: ChpParams, initialState: ChpState) extends SimulatorCompone
   }
 
   private def onTargetUpdate(rate: Double): Boolean = {
+    queue.enqueue(ChpMapping.events, TopicEvent(Path(Seq("output", "target")), Some(ValueString("Charge rate target updated: " + rate))))
     val boundTarget = boundTargetRate(rate, params)
     if (boundTarget != state.outputTarget) {
       state = state.copy(outputTarget = boundTarget)

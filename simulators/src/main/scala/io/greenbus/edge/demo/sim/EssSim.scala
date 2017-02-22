@@ -19,6 +19,7 @@
 package io.greenbus.edge.demo.sim
 
 import io.greenbus.edge._
+import io.greenbus.edge.channel.Sink
 
 object EssMapping {
 
@@ -37,6 +38,8 @@ object EssMapping {
   val faultStatus = Path("FaultStatus")
 
   val params = Path("Params")
+
+  val events = Path("Events")
 
   val pointTypes = Seq(percentSoc, socMax, socMin, chargeDischargeRate, chargeRateMax, dischargeRateMax, capacity, efficiency, chargeRateTarget, mode, faultStatus)
 
@@ -125,6 +128,9 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
 
   private var state = initialState
 
+  private val queue = new SimEventQueue
+  def eventQueue: EventQueue = queue
+
   def currentState: EssState = state
 
   def updates(line: LineState, time: Long): Seq[SimUpdate] = {
@@ -187,6 +193,7 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
   }
 
   private def onModeUpdate(mode: Int): Boolean = {
+    queue.enqueue(EssMapping.events, TopicEvent(Path(Seq("output", "mode")), Some(ValueString("Mode updated: " + EssMode.parse(mode).getOrElse("Unknown")))))
     EssMode.parse(mode).foreach {
       case modeUpdate @ Constant => state = state.copy(mode = modeUpdate, output = if (!state.fault) state.target else 0.0)
       case modeUpdate => state = state.copy(mode = modeUpdate)
@@ -195,6 +202,8 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
   }
 
   private def onTargetChargeRateUpdate(target: Double): Boolean = {
+    queue.enqueue(EssMapping.events, TopicEvent(Path(Seq("output", "target")), Some(ValueString("Charge rate target updated."))))
+
     state.mode match {
       case Constant =>
         val boundTarget = boundTargetRate(target, params)
@@ -216,6 +225,7 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
   }
 
   private def onFaultEnable(): Boolean = {
+    queue.enqueue(EssMapping.events, TopicEvent(Path(Seq("fault", "occur")), Some(ValueString("Fault occurred"))))
     if (!state.fault) {
       state = state.copy(fault = true)
       true
@@ -224,6 +234,7 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
     }
   }
   private def onFaultDisable(): Boolean = {
+    queue.enqueue(EssMapping.events, TopicEvent(Path(Seq("fault", "clear")), Some(ValueString("Fault cleared"))))
     if (state.fault) {
       state = state.copy(fault = false)
       true
@@ -232,4 +243,22 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
     }
   }
 
+}
+
+class SimEventQueue extends EventQueue {
+  private var q = Vector.empty[(Path, TopicEvent)]
+
+  def enqueue(path: Path, topicEvent: TopicEvent): Unit = {
+    q = q :+ ((path, topicEvent))
+  }
+
+  def dequeue(): Seq[(Path, TopicEvent)] = {
+    val all = q
+    q = Vector.empty[(Path, TopicEvent)]
+    all
+  }
+}
+
+trait EventQueue {
+  def dequeue(): Seq[(Path, TopicEvent)]
 }

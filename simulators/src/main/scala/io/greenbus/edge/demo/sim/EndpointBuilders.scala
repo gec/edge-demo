@@ -78,7 +78,9 @@ object EndpointBuilders {
     val indexes = Map(Path("gridDeviceType") -> ValueSimpleString(gridType))
     val meta = Map.empty[Path, Value]
     val latestKvs = Map.empty[Path, LatestKeyValueEntry]
-    val events = Map.empty[Path, EventEntry]
+
+    val events = Map(BreakerMapping.events -> EventEntry(MetadataDesc(Map(), Map())))
+
     val activeSets = Map.empty[Path, ActiveSetConfigEntry]
 
     val timeSeries = Map(
@@ -126,7 +128,8 @@ object EndpointBuilders {
     val latestKvs = Map(
       ChpMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
 
-    val events = Map.empty[Path, EventEntry]
+    val events = Map(ChpMapping.events -> EventEntry(MetadataDesc(Map(), Map())))
+
     val activeSets = Map.empty[Path, ActiveSetConfigEntry]
 
     val timeSeries = Map(
@@ -151,7 +154,6 @@ object EndpointBuilders {
     val latestKvs = Map(
       EssMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
 
-    val events = Map.empty[Path, EventEntry]
     val activeSets = Map.empty[Path, ActiveSetConfigEntry]
 
     val modeMapping = ValueArray(Vector(
@@ -182,6 +184,8 @@ object EndpointBuilders {
 
     val setModeMetadata = Map(Path("simpleInputType") -> ValueString("integer"), modeMapKv)
 
+    val events = Map(EssMapping.events -> EventEntry(MetadataDesc(Map(), Map())))
+
     val outputs = Map(
       EssMapping.setBatteryMode -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridValueType") -> ValueSimpleString("setEssMode")), setModeMetadata)),
       EssMapping.setChargeRate -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridValueType") -> ValueSimpleString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double")))),
@@ -200,7 +204,8 @@ object EndpointBuilders {
     val latestKvs = Map(
       PvMapping.params -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
 
-    val events = Map.empty[Path, EventEntry]
+    val events = Map(PvMapping.events -> EventEntry(MetadataDesc(Map(), Map())))
+
     val activeSets = Map.empty[Path, ActiveSetConfigEntry]
 
     val timeSeries = Map(
