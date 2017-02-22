@@ -101,7 +101,6 @@ class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord, ctx: Simulator
           pair.publisher.timeSeriesStreams.get(update.path) match {
             case None => logger.warn("Path for update unrecognized: " + update.path)
             case Some(sink) =>
-              println("publishing: " + update.path + "/" + update.v)
               sink.push(TimeSeriesSample(now, update.v))
               publishersToFlush += pair.publisher
           }

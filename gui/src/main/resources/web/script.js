@@ -928,6 +928,26 @@ angular.module('edgeGui', [ 'ngRoute' ])
         updateDataSet('breakerStatusSet', pathList);
     });
 
+    var essModeSpec = {
+        key: { part: [ 'gridValueType' ] },
+        value: { stringValue: 'essMode' }
+    };
+
+    var essModeSub = dataIndexSubscription(essModeSpec, function (msg, pathList) {
+        handleNotification(msg)
+        updateDataSet('essModeSet', pathList);
+    });
+
+    var essSocSpec = {
+        key: { part: [ 'gridValueType' ] },
+        value: { stringValue: 'percentSoc' }
+    };
+
+    var essSocSub = dataIndexSubscription(essSocSpec, function (msg, pathList) {
+        handleNotification(msg)
+        updateDataSet('essSocSet', pathList);
+    });
+
     var breakerOutputSpec = {
         key: { part: [ 'gridOutputType' ] },
         value: { stringValue: 'pccBkrSwitch' }
@@ -940,6 +960,30 @@ angular.module('edgeGui', [ 'ngRoute' ])
         updateOutputSet('breakerOutputSet', pathList);
     });
 
+    var outputTargetSpec = {
+        key: { part: [ 'gridOutputType' ] },
+        value: { stringValue: 'setOutputTarget' }
+    };
+
+    var outputTargetSub = outputIndexSubscription(outputTargetSpec, function (msg, pathList) {
+        console.log("saw notification: ");
+        console.log(msg);
+        handleNotification(msg)
+        updateOutputSet('outputTargetSet', pathList);
+    });
+
+
+    var outputEssModeSpec = {
+        key: { part: [ 'gridOutputType' ] },
+        value: { stringValue: 'setEssMode' }
+    };
+
+    var outputEssModeSub = outputIndexSubscription(outputEssModeSpec, function (msg, pathList) {
+        console.log("saw notification: ");
+        console.log(msg);
+        handleNotification(msg)
+        updateOutputSet('setEssModeSet', pathList);
+    });
 
     $scope.$on('$destroy', function() {
         console.log("main destroyed: ");

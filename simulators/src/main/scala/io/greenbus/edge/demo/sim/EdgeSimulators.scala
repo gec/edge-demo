@@ -40,7 +40,6 @@ object EdgeSimulators {
     val session = Await.result(sessionFut, 5000.milliseconds)
 
     val edgeConnection = new EdgeConnectionImpl(service.eventLoop, session)
-    println("connected")
 
     val rootConfig = ConfigFactory.load()
     val slf4jConfig = ConfigFactory.parseString("""akka { loggers = ["akka.event.slf4j.Slf4jLogger"] }""")

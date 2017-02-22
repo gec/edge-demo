@@ -139,6 +139,7 @@ object EndpointBuilders {
       ChpMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(faultType)), meta = Map(faultMappingKv)))
 
     val outputs = Map(
+      ChpMapping.setTarget -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double")))),
       ChpMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
       ChpMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))))
 
@@ -171,7 +172,7 @@ object EndpointBuilders {
 
     val timeSeries = Map(
       EssMapping.percentSoc -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("percentSoc")), meta = Map(Path("unit") -> ValueString("%"))),
-      EssMapping.mode -> tsEnum(0, now, meta = Map(modeMapKv)),
+      EssMapping.mode -> tsEnum(0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("essMode")), meta = Map(modeMapKv)),
       EssMapping.socMax -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("socMax")), meta = Map(Path("unit") -> ValueString("%"))),
       EssMapping.socMin -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString("socMin")), meta = Map(Path("unit") -> ValueString("%"))),
       EssMapping.chargeDischargeRate -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),
@@ -187,8 +188,8 @@ object EndpointBuilders {
     val events = Map(EssMapping.events -> EventEntry(MetadataDesc(Map(), Map())))
 
     val outputs = Map(
-      EssMapping.setBatteryMode -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridValueType") -> ValueSimpleString("setEssMode")), setModeMetadata)),
-      EssMapping.setChargeRate -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridValueType") -> ValueSimpleString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double")))),
+      EssMapping.setBatteryMode -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString("setEssMode")), setModeMetadata)),
+      EssMapping.setChargeRate -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double")))),
       EssMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
       EssMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))))
 
