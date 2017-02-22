@@ -286,7 +286,7 @@ var outputHelpers = function() {
             var outputValue = Number(outputObj.userOutput);
 
             var endPath = {
-                endpointId: endpointIdForName(outputObj.endpointId),
+                endpointId: outputObj.endpointId,
                 key: outputObj.key
             };
 
@@ -309,7 +309,7 @@ var outputHelpers = function() {
             console.log(outputObj);
 
             var endPath = {
-                endpointId: endpointIdForName(outputObj.endpointId),
+                endpointId: outputObj.endpointId,
                 key: outputObj.key
             };
 
@@ -330,7 +330,7 @@ var outputHelpers = function() {
             var outputValue = Number(outputObj.userOutput);
 
             var endPath = {
-                endpointId: endpointIdForName(outputObj.endpointId),
+                endpointId: outputObj.endpointId,
                 key: outputObj.key
             };
 
@@ -807,6 +807,8 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
     $scope.dataMap = {};
     $scope.outputMap = {};
+
+    $scope.outputs = outputHelpers;
 
     //$scope.outputPowerSet = []
 

@@ -54,7 +54,7 @@ class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord, ctx: Simulator
   publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pccBkr, Path(ctx.equipmentPrefix :+ "PCC_BKR"), EndpointBuilders.buildBreaker(pcc = true))
 
   private val custBkr = new BreakerSim(true)
-  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, pccBkr, Path(ctx.equipmentPrefix :+ "CUST_BKR"), EndpointBuilders.buildBreaker(pcc = false))
+  publisherPairs = publisherPairs :+ new SimulatorPublisherPair(eventThread, custBkr, Path(ctx.equipmentPrefix :+ "CUST_BKR"), EndpointBuilders.buildBreaker(pcc = false))
 
   private val simulator = new Simulator(
     SimulatorState(0.0, 0.0, 0.0, 0.0),
@@ -101,6 +101,7 @@ class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord, ctx: Simulator
           pair.publisher.timeSeriesStreams.get(update.path) match {
             case None => logger.warn("Path for update unrecognized: " + update.path)
             case Some(sink) =>
+              println("publishing: " + update.path + "/" + update.v)
               sink.push(TimeSeriesSample(now, update.v))
               publishersToFlush += pair.publisher
           }

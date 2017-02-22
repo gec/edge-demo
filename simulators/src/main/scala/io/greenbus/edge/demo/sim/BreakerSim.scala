@@ -18,6 +18,7 @@
  */
 package io.greenbus.edge.demo.sim
 
+import com.typesafe.scalalogging.LazyLogging
 import io.greenbus.edge._
 
 object BreakerMapping {
@@ -39,7 +40,7 @@ object BreakerMapping {
   val commandTypes = Seq(bkrTrip, bkrClose)
 }
 
-class BreakerSim(initial: Boolean) extends SimulatorComponent {
+class BreakerSim(initial: Boolean) extends SimulatorComponent with LazyLogging {
 
   private var bkrStatus: Boolean = initial
 
@@ -64,11 +65,13 @@ class BreakerSim(initial: Boolean) extends SimulatorComponent {
   }
 
   def handleTrip(): Boolean = {
+    logger.info(s"Breaker trip")
     queue.enqueue(BreakerMapping.events, TopicEvent(Path(Seq("breaker", "trip")), Some(ValueString("Breaker tripped"))))
     bkrStatus = false
     true
   }
   def handleClose(): Boolean = {
+    logger.info(s"Breaker close")
     queue.enqueue(BreakerMapping.events, TopicEvent(Path(Seq("breaker", "close")), Some(ValueString("Breaker closed"))))
     bkrStatus = true
     true
