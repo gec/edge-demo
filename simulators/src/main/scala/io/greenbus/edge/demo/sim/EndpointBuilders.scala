@@ -22,7 +22,7 @@ import io.greenbus.edge._
 import io.greenbus.edge.client._
 import play.api.libs.json.Json
 
-object EndpointBuilders {
+object EndpointUtils {
 
   def tsDouble(v: Double, now: Long, indexes: Map[Path, IndexableValue] = Map(), meta: Map[Path, Value] = Map()): TimeSeriesValueEntry = {
     TimeSeriesValueEntry(
@@ -44,6 +44,10 @@ object EndpointBuilders {
     LatestKeyValueEntry(
       v, MetadataDesc(indexes, meta))
   }
+}
+
+object EndpointBuilders {
+  import EndpointUtils._
 
   val faultType = "fault"
   val outputPowerType = "outputPower"
