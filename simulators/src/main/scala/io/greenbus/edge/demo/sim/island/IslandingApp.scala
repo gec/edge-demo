@@ -18,17 +18,10 @@
  */
 package io.greenbus.edge.demo.sim.island
 
-import java.util.UUID
+import io.greenbus.edge.api.{OutputParams, OutputResult, OutputSuccess}
+import io.greenbus.edge.flow
+import io.greenbus.edge.thread.CallMarshaller
 
-import akka.actor.{ Actor, Props }
-import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge._
-import io.greenbus.edge.client._
-import io.greenbus.edge.demo.sim.EssSim.GridForming
-import io.greenbus.edge.demo.sim.{ TimeSeriesUpdate => _, _ }
-import play.api.libs.json.Json
-
-import scala.concurrent.Future
 
 object ControlParams {
   import play.api.libs.json._
@@ -37,6 +30,48 @@ object ControlParams {
 }
 case class ControlParams(microgridName: String, chpRampedUp: Double, chpNominal: Double, chargingBatteryRate: Double)
 
+
+
+class IslandingApp(eventThread: CallMarshaller, publisher: IslandAppPublisher, subscriber: IslandAppSubscriber) {
+
+  private var enabled = false
+  private var pccConnected = Option.empty[Boolean]
+
+  def init(): Unit = {
+
+  }
+
+  publisher.setEnableRcv.bind(new flow.Responder[OutputParams, OutputResult] {
+    override def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      respond(OutputSuccess)
+      handleEnable()
+    }
+  })
+
+  publisher.setDisableRcv.bind(new flow.Responder[OutputParams, OutputResult] {
+    override def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      respond(OutputSuccess)
+      handleDisable()
+    }
+  })
+
+
+  private def handleState(state: BreakerStates): Unit = {
+
+  }
+
+  private def handleEnable(): Unit = {
+
+  }
+
+  private def handleDisable(): Unit = {
+
+  }
+
+}
+
+
+/*
 object IslandingApp {
   import io.greenbus.edge.demo.sim.EndpointUtils._
 
@@ -318,3 +353,4 @@ class IslandingApp(connection: EdgeConnection, endpointId: EndpointId, params: C
   }
 
 }
+*/

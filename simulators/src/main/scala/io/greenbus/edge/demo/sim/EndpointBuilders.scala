@@ -45,6 +45,8 @@ object EndpointBuilders {
     LatestKeyValueEntry(
       v, MetadataDesc(indexes, meta))
   }*/
+  val pccBkr = "pccBkr"
+  val custBkr = "custBkr"
 
   val faultType = "fault"
   val outputPowerType = "outputPower"
@@ -73,7 +75,7 @@ object EndpointBuilders {
 
   class BreakerPublisher(pcc: Boolean, builder: EndpointBuilder) {
 
-    private val gridType = if (pcc) "pccBkr" else "custBkr"
+    private val gridType = if (pcc) pccBkr else custBkr
     builder.setIndexes(Map(Path("gridDeviceType") -> ValueString(gridType)))
 
     val events = builder.topicEventValue(BreakerMapping.events)
@@ -81,7 +83,7 @@ object EndpointBuilders {
     val bkrPower = builder.seriesValue(BreakerMapping.bkrPower, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputPowerType)), metadata = Map(Path("unit") -> ValueString("kW"))))
     val bkrVoltage = builder.seriesValue(BreakerMapping.bkrVoltage, KeyMetadata(metadata = Map(Path("unit") -> ValueString("kV"))))
     val bkrCurrent = builder.seriesValue(BreakerMapping.bkrCurrent, KeyMetadata(metadata = Map(Path("unit") -> ValueString("A"))))
-    val bkrStatus = builder.seriesValue(BreakerMapping.bkrStatus, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(bkrStatusType)), metadata = Map(breakerStatusMappingKv)))
+    val bkrStatus = builder.seriesValue(BreakerMapping.bkrStatus, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(bkrStatusType), Path("bkrStatusRole") -> ValueString(gridType)), metadata = Map(breakerStatusMappingKv)))
 
     val bkrTrip = builder.outputStatus(BreakerMapping.bkrTrip, KeyMetadata(Map(Path("gridOutputType") -> ValueString(s"${gridType}Switch")), Map(Path("simpleInputType") -> ValueString("indication"))))
     val bkrTripReceiver = builder.registerOutput(BreakerMapping.bkrTrip)
