@@ -33,32 +33,14 @@ body {
     margin-top: 40px;
 }
 
+div.value-panel {
+    margin-top: 15px;
+}
 
-/*.nav-sidebar {
-  margin-right: -21px; *//* 20px padding + 1px border *//*
-  margin-bottom: 20px;
-  margin-left: -20px;
+div.value-panel h5 {
+    font-size: 120%;
 }
-.nav-sidebar > li > a {
-  padding-right: 20px;
-  padding-left: 20px;
-}
-.nav-sidebar > .active > a,
-.nav-sidebar > .active > a:hover,
-.nav-sidebar > .active > a:focus {
-  color: #fff;
-  background-color: #428bca;
-}*/
 
-/*.main {
-  padding: 20px;
+div.value-panel h5 span {
+    float: right!important;
 }
-@media (min-width: 768px) {
-  .main {
-    padding-right: 40px;
-    padding-left: 40px;
-  }
-}
-.main .page-header {
-  margin-top: 0;
-}*/

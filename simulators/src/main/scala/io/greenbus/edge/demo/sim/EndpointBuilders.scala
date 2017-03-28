@@ -195,6 +195,7 @@ object EndpointBuilders {
       ChpMapping.faultStatus -> tsBool(false, now, indexes = Map(Path("gridValueType") -> ValueString(faultType)), meta = Map(faultMappingKv)))
 
     val outputs = Map(
+      ChpMapping.setTarget -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(Path("gridOutputType") -> ValueSimpleString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double")))),
       ChpMapping.faultEnable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
       ChpMapping.faultDisable -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))))
 

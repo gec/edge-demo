@@ -26,26 +26,26 @@
 
     <div class="container">
         <div class="row">
-            <div class="col-md-4">
-                <div>
-                    <h4>Outputs</h4>
+            <div class="col-md-5">
+                <div class="value-panel">
+                    <h5><small>gridValueType: </small><span class="label label-default pull-right">outputPower</span></h5>
                     <div class="table-responsive">
                         <table class="table">
-                            <thead>
+                            <!--<thead>
                             <tr>
                                 <th>Endpoint</th>
                                 <th style="text-align: right">Value</th>
                                 <th>Unit</th>
                                 <th>Time</th>
                             </tr>
-                            </thead>
+                            </thead>-->
                             <tbody>
                             <tr ng-repeat="data in outputPowerSet">
                                 <td>
-                        <span ng-repeat="part in data.endpointId.namedId.name.part">
-                            <span ng-if="!$last">{{part}} / </span>
-                            <span ng-if="$last"><strong>{{part}}</strong></span>
-                        </span>
+                                    <span ng-repeat="part in data.endpointId.namedId.name.part">
+                                        <span ng-if="!$last">{{part}} / </span>
+                                        <span ng-if="$last"><strong>{{part}}</strong></span>
+                                    </span>
                                 </td>
                                 <td style="text-align: right" ng-if="!data.db.currentValue()"> - </td>
                                 <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.bool != null">{{data.db.currentValue().typedValue.bool}}</td>
@@ -61,62 +61,30 @@
                         </table>
                     </div>
                 </div>
-            </div>
 
-            <div class="col-md-4">
 
-                <div>
-                    <h4>Breaker Statuses</h4>
+                <div class="value-panel">
+                    <h5><small>gridOutputType: </small><span class="label label-default">setOutputTarget</span></h5>
                     <div class="table-responsive">
                         <table class="table">
-                            <thead>
-                            <tr>
-                                <th>Endpoint</th>
-                                <th style="text-align: right">Value</th>
-                                <!--<th>Unit</th>-->
-                                <th>Time</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr ng-repeat="data in breakerStatusSet">
-                                <td>
-                                    <span ng-repeat="part in data.endpointId.namedId.name.part">
-                                        <span ng-if="!$last">{{part}} / </span>
-                                        <span ng-if="$last"><strong>{{part}}</strong></span>
-                                    </span>
-                                </td>
-                                <td style="text-align: right" ng-if="!data.db.currentValue()"> - </td>
-                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.bool != null">{{data.db.currentValue().typedValue.bool}}</td>
-                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.integer != null">{{data.db.currentValue().typedValue.integer}}</td>
-                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.decimal != null">{{data.db.currentValue().typedValue.decimal | number: 2}}</td>
-                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.string != null">{{data.db.currentValue().typedValue.string}}</td>
-                                <td ng-if="data.metadata && data.metadata.unit">{{data.metadata.unit}}</td>
-                                <!--<td ng-if="!data.metadata.unit || !data.metadata.unit"></td>-->
-                                <td ng-if="data.db.currentValue()">{{data.db.currentValue().date | date:'HH:mm:ss'}}</td>
-                                <td ng-if="!data.db.currentValue()"> - </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div>
-                    <h3>Output</h3>
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
+                            <!--<thead>
                             <tr>
                                 <th>Name</th>
                                 <th style="text-align: right">Output</th>
                             </tr>
-                            </thead>
+                            </thead>-->
                             <tbody>
-                            <tr ng-repeat="value in outputMap">
+                            <tr ng-repeat="value in outputTargetSet">
                                 <td>
-                        <span ng-repeat="part in value.key.part">
-                            <span ng-if="!$last">{{part}} / </span>
-                            <span ng-if="$last"><strong>{{part}}</strong></span>
-                        </span>
+                                <!--<span ng-repeat="part in value.key.part">
+                                    <span ng-if="!$last">{{part}} / </span>
+                                    <span ng-if="$last"><strong>{{part}}</strong></span>
+                                </span>-->
+
+                                    <span ng-repeat="part in value.endpointId.namedId.name.part">
+                                        <span ng-if="!$last">{{part}} / </span>
+                                        <span ng-if="$last"><strong>{{part}}</strong></span>
+                                    </span>
                                 </td>
                                 <!--<td style="text-align: right">{{value}}</td>-->
                                 <td ng-if="value.inputDef && value.inputDef.type === 'indication'" style="text-align: right">
@@ -148,6 +116,225 @@
                                         </button>
                                     </div>
                                 </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <div class="value-panel">
+                    <h5><small>gridValueType: </small><span class="label label-default">breakerStatus</span></h5>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <!--<thead>
+                            <tr>
+                                <th>Endpoint</th>
+                                <th style="text-align: right">Value</th>
+                                &lt;!&ndash;<th>Unit</th>&ndash;&gt;
+                                <th>Time</th>
+                            </tr>
+                            </thead>-->
+                            <tbody>
+                            <tr ng-repeat="data in breakerStatusSet">
+                                <td>
+                                    <span ng-repeat="part in data.endpointId.namedId.name.part">
+                                        <span ng-if="!$last">{{part}} / </span>
+                                        <span ng-if="$last"><strong>{{part}}</strong></span>
+                                    </span>
+                                </td>
+                                <td style="text-align: right" ng-if="!data.db.currentValue()"> - </td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.bool != null">{{data.db.currentValue().typedValue.bool}}</td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.integer != null">{{data.db.currentValue().typedValue.integer}}</td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.decimal != null">{{data.db.currentValue().typedValue.decimal | number: 2}}</td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.string != null">{{data.db.currentValue().typedValue.string}}</td>
+                                <td ng-if="data.metadata && data.metadata.unit">{{data.metadata.unit}}</td>
+                                <!--<td ng-if="!data.metadata.unit || !data.metadata.unit"></td>-->
+                                <td ng-if="data.db.currentValue()">{{data.db.currentValue().date | date:'HH:mm:ss'}}</td>
+                                <td ng-if="!data.db.currentValue()"> - </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="value-panel">
+                    <h5><small>gridOutputType: </small><span class="label label-default">pccBkrSwitch</span></h5>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <!--<thead>
+                            <tr>
+                                <th>Name</th>
+                                <th style="text-align: right">Output</th>
+                            </tr>
+                            </thead>-->
+                            <tbody>
+                            <tr ng-repeat="value in breakerOutputSet">
+                                <td>
+                                <span ng-repeat="part in value.key.part">
+                                    <span ng-if="!$last">{{part}} / </span>
+                                    <span ng-if="$last"><strong>{{part}}</strong></span>
+                                </span>
+                                </td>
+                                <!--<td style="text-align: right">{{value}}</td>-->
+                                <td ng-if="value.inputDef && value.inputDef.type === 'indication'" style="text-align: right">
+                                    <button type="button" class="btn btn-default" ng-click="outputs.issueIndicationOutput(value.endpointPathString, value)">
+                                        <span class="glyphicon glyphicon-circle-arrow-down" aria-hidden="true"></span>
+                                    </button>
+                                </td>
+                                <td ng-if="value.inputDef && value.inputDef.type === 'integer' && value.inputDef.mapping" style="text-align: right">
+                                    <select class="pull-right" name="singleSelect" id="singleSelect" ng-model="value.userOutput" ng-change="outputs.issueIntegerOutput(value.endpointPathString, value)">
+                                        <option value="">--- select mode ---</option>
+                                        <option ng-repeat="map in value.inputDef.mapping" value="{{map.index}}">{{map.name}}</option>
+                                    </select>
+                                </td>
+                                <td ng-if="value.inputDef && value.inputDef.type === 'integer' && !value.inputDef.mapping" style="text-align: right">
+                                    <div class="input-group pull-right">
+                                        <input type="text" class="form-control ng-pristine ng-valid ng-valid-pattern" ng-model="value.userOutput" name="setpoint_value" ng-pattern="pattern" style="width:6em;" placeholder="integer">
+                                        <button type="button" class="btn btn-primary" ng-click="outputs.issueIntegerOutput(value.endpointPathString, value)" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                                            Set
+                                            <span style="padding-right: 0.5em;"> </span><i ng-class="executeClasses" class="fa fa-sign-in"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td ng-if="value.inputDef && value.inputDef.type === 'double'" style="text-align: right">
+                                    <div class="input-group pull-right">
+                                        <input type="text" class="form-control ng-pristine ng-valid ng-valid-pattern" ng-model="value.userOutput" name="setpoint_value" ng-pattern="pattern" style="width:6em;" placeholder="decimal">
+                                        <button type="button" class="btn btn-primary" ng-click="outputs.issueDoubleOutput(value.endpointPathString, value)" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                                            Set
+                                            <span style="padding-right: 0.5em;"> </span><i ng-class="executeClasses" class="fa fa-sign-in"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+                <div class="value-panel">
+                    <h5><small>gridValueType: </small><span class="label label-default">essMode</span></h5>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <!--<thead>
+                            <tr>
+                                <th>Endpoint</th>
+                                <th style="text-align: right">Value</th>
+                                &lt;!&ndash;<th>Unit</th>&ndash;&gt;
+                                <th>Time</th>
+                            </tr>
+                            </thead>-->
+                            <tbody>
+                            <tr ng-repeat="data in essModeSet">
+                                <td>
+                                    <span ng-repeat="part in data.endpointId.namedId.name.part">
+                                        <span ng-if="!$last">{{part}} / </span>
+                                        <span ng-if="$last"><strong>{{part}}</strong></span>
+                                    </span>
+                                </td>
+                                <td style="text-align: right" ng-if="!data.db.currentValue()"> - </td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.bool != null">{{data.db.currentValue().typedValue.bool}}</td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.integer != null">{{data.db.currentValue().typedValue.integer}}</td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.decimal != null">{{data.db.currentValue().typedValue.decimal | number: 2}}</td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.string != null">{{data.db.currentValue().typedValue.string}}</td>
+                                <td ng-if="data.metadata && data.metadata.unit">{{data.metadata.unit}}</td>
+                                <!--<td ng-if="!data.metadata.unit || !data.metadata.unit"></td>-->
+                                <td ng-if="data.db.currentValue()">{{data.db.currentValue().date | date:'HH:mm:ss'}}</td>
+                                <td ng-if="!data.db.currentValue()"> - </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="value-panel">
+                    <h5><small>gridOutputType: </small><span class="label label-default">setEssMode</span></h5>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <!--<thead>
+                            <tr>
+                                <th>Name</th>
+                                <th style="text-align: right">Output</th>
+                            </tr>
+                            </thead>-->
+                            <tbody>
+                            <tr ng-repeat="value in setEssModeSet">
+                                <td>
+                                <span ng-repeat="part in value.key.part">
+                                    <span ng-if="!$last">{{part}} / </span>
+                                    <span ng-if="$last"><strong>{{part}}</strong></span>
+                                </span>
+                                </td>
+                                <!--<td style="text-align: right">{{value}}</td>-->
+                                <td ng-if="value.inputDef && value.inputDef.type === 'indication'" style="text-align: right">
+                                    <button type="button" class="btn btn-default" ng-click="outputs.issueIndicationOutput(value.endpointPathString, value)">
+                                        <span class="glyphicon glyphicon-circle-arrow-down" aria-hidden="true"></span>
+                                    </button>
+                                </td>
+                                <td ng-if="value.inputDef && value.inputDef.type === 'integer' && value.inputDef.mapping" style="text-align: right">
+                                    <select class="pull-right" name="singleSelect" id="singleSelect" ng-model="value.userOutput" ng-change="outputs.issueIntegerOutput(value.endpointPathString, value)">
+                                        <option value="">--- select mode ---</option>
+                                        <option ng-repeat="map in value.inputDef.mapping" value="{{map.index}}">{{map.name}}</option>
+                                    </select>
+                                </td>
+                                <td ng-if="value.inputDef && value.inputDef.type === 'integer' && !value.inputDef.mapping" style="text-align: right">
+                                    <div class="input-group pull-right">
+                                        <input type="text" class="form-control ng-pristine ng-valid ng-valid-pattern" ng-model="value.userOutput" name="setpoint_value" ng-pattern="pattern" style="width:6em;" placeholder="integer">
+                                        <button type="button" class="btn btn-primary" ng-click="outputs.issueIntegerOutput(value.endpointPathString, value)" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                                            Set
+                                            <span style="padding-right: 0.5em;"> </span><i ng-class="executeClasses" class="fa fa-sign-in"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td ng-if="value.inputDef && value.inputDef.type === 'double'" style="text-align: right">
+                                    <div class="input-group pull-right">
+                                        <input type="text" class="form-control ng-pristine ng-valid ng-valid-pattern" ng-model="value.userOutput" name="setpoint_value" ng-pattern="pattern" style="width:6em;" placeholder="decimal">
+                                        <button type="button" class="btn btn-primary" ng-click="outputs.issueDoubleOutput(value.endpointPathString, value)" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                                            Set
+                                            <span style="padding-right: 0.5em;"> </span><i ng-class="executeClasses" class="fa fa-sign-in"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+                <div class="value-panel">
+                    <h5><small>gridValueType: </small><span class="label label-default">percentSoc</span></h5>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <!--<thead>
+                            <tr>
+                                <th>Endpoint</th>
+                                <th style="text-align: right">Value</th>
+                                &lt;!&ndash;<th>Unit</th>&ndash;&gt;
+                                <th>Time</th>
+                            </tr>
+                            </thead>-->
+                            <tbody>
+                            <tr ng-repeat="data in essSocSet">
+                                <td>
+                                    <span ng-repeat="part in data.endpointId.namedId.name.part">
+                                        <span ng-if="!$last">{{part}} / </span>
+                                        <span ng-if="$last"><strong>{{part}}</strong></span>
+                                    </span>
+                                </td>
+                                <td style="text-align: right" ng-if="!data.db.currentValue()"> - </td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.bool != null">{{data.db.currentValue().typedValue.bool}}</td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.integer != null">{{data.db.currentValue().typedValue.integer}}</td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.decimal != null">{{data.db.currentValue().typedValue.decimal | number: 2}}</td>
+                                <td style="text-align: right" ng-if="data.db.currentValue() && data.db.currentValue().typedValue && data.db.currentValue().typedValue.string != null">{{data.db.currentValue().typedValue.string}}</td>
+                                <td ng-if="data.metadata && data.metadata.unit">{{data.metadata.unit}}</td>
+                                <!--<td ng-if="!data.metadata.unit || !data.metadata.unit"></td>-->
+                                <td ng-if="data.db.currentValue()">{{data.db.currentValue().date | date:'HH:mm:ss'}}</td>
+                                <td ng-if="!data.db.currentValue()"> - </td>
                             </tr>
                             </tbody>
                         </table>

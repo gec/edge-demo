@@ -286,7 +286,7 @@ var outputHelpers = function() {
             var outputValue = Number(outputObj.userOutput);
 
             var endPath = {
-                endpointId: endpointIdForName(outputObj.endpointId),
+                endpointId: outputObj.endpointId,
                 key: outputObj.key
             };
 
@@ -309,7 +309,7 @@ var outputHelpers = function() {
             console.log(outputObj);
 
             var endPath = {
-                endpointId: endpointIdForName(outputObj.endpointId),
+                endpointId: outputObj.endpointId,
                 key: outputObj.key
             };
 
@@ -330,7 +330,7 @@ var outputHelpers = function() {
             var outputValue = Number(outputObj.userOutput);
 
             var endPath = {
-                endpointId: endpointIdForName(outputObj.endpointId),
+                endpointId: outputObj.endpointId,
                 key: outputObj.key
             };
 
@@ -808,6 +808,8 @@ angular.module('edgeGui', [ 'ngRoute' ])
     $scope.dataMap = {};
     $scope.outputMap = {};
 
+    $scope.outputs = outputHelpers;
+
     //$scope.outputPowerSet = []
 
     var updateDataSet = function(name, pathList) {
@@ -926,6 +928,26 @@ angular.module('edgeGui', [ 'ngRoute' ])
         updateDataSet('breakerStatusSet', pathList);
     });
 
+    var essModeSpec = {
+        key: { part: [ 'gridValueType' ] },
+        value: { stringValue: 'essMode' }
+    };
+
+    var essModeSub = dataIndexSubscription(essModeSpec, function (msg, pathList) {
+        handleNotification(msg)
+        updateDataSet('essModeSet', pathList);
+    });
+
+    var essSocSpec = {
+        key: { part: [ 'gridValueType' ] },
+        value: { stringValue: 'percentSoc' }
+    };
+
+    var essSocSub = dataIndexSubscription(essSocSpec, function (msg, pathList) {
+        handleNotification(msg)
+        updateDataSet('essSocSet', pathList);
+    });
+
     var breakerOutputSpec = {
         key: { part: [ 'gridOutputType' ] },
         value: { stringValue: 'pccBkrSwitch' }
@@ -938,6 +960,30 @@ angular.module('edgeGui', [ 'ngRoute' ])
         updateOutputSet('breakerOutputSet', pathList);
     });
 
+    var outputTargetSpec = {
+        key: { part: [ 'gridOutputType' ] },
+        value: { stringValue: 'setOutputTarget' }
+    };
+
+    var outputTargetSub = outputIndexSubscription(outputTargetSpec, function (msg, pathList) {
+        console.log("saw notification: ");
+        console.log(msg);
+        handleNotification(msg)
+        updateOutputSet('outputTargetSet', pathList);
+    });
+
+
+    var outputEssModeSpec = {
+        key: { part: [ 'gridOutputType' ] },
+        value: { stringValue: 'setEssMode' }
+    };
+
+    var outputEssModeSub = outputIndexSubscription(outputEssModeSpec, function (msg, pathList) {
+        console.log("saw notification: ");
+        console.log(msg);
+        handleNotification(msg)
+        updateOutputSet('setEssModeSet', pathList);
+    });
 
     $scope.$on('$destroy', function() {
         console.log("main destroyed: ");
