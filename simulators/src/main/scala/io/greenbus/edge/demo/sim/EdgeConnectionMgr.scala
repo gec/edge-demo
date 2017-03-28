@@ -18,14 +18,7 @@
  */
 package io.greenbus.edge.demo.sim
 
-import akka.actor.Actor
-import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge.amqp.AmqpService
-import io.greenbus.edge.amqp.impl.AmqpIoImpl
-import io.greenbus.edge.client.{ EdgeConnection, EdgeConnectionImpl }
-
-import scala.concurrent.{ ExecutionContext, Future }
-
+/*
 object EdgeConnectionMgr {
 
   case object DoConnect
@@ -47,4 +40,5 @@ class EdgeConnectionMgr(service: AmqpService) extends Actor with LazyLogging {
     case DoConnect =>
   }
 }
+*/
 

@@ -27,7 +27,7 @@
     <dependencies>
         <dependency>
             <groupId>io.greenbus.edge</groupId>
-            <artifactId>greenbus-edge-amqp</artifactId>
+            <artifactId>greenbus-edge-peer-relay</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>

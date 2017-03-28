@@ -21,7 +21,7 @@ package io.greenbus.edge.demo.gui
 import akka.actor.{ Actor, ActorRef, PoisonPill, Props }
 import com.google.protobuf.util.JsonFormat
 import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge._
+/*import io.greenbus.edge._
 import io.greenbus.edge.amqp.AmqpService
 import io.greenbus.edge.client.{ EdgeConnection, EdgeConnectionImpl, EdgeOutputClient, EdgeSubscription }
 import io.greenbus.edge.proto.{ ClientToServerMessage, ServerToClientMessage }
@@ -302,3 +302,4 @@ class GuiSocketMgr(mgr: ActorRef) extends SocketMgr with LazyLogging {
     mgr ! PeerLinkMgr.SocketMessage(text, socket)
   }
 }
+*/ 

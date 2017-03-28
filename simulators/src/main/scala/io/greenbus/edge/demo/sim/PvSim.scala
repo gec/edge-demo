@@ -18,7 +18,9 @@
  */
 package io.greenbus.edge.demo.sim
 
-import io.greenbus.edge.{ Path, SequencedValue, TopicEvent, ValueString }
+import io.greenbus.edge.api._
+import io.greenbus.edge.demo.sim.EndpointBuilders.PvPublisher
+import io.greenbus.edge.flow
 import play.api.libs.json.Json
 
 object EllipseParams {
@@ -76,38 +78,34 @@ object PvSim {
 }
 
 import PvSim._
-import io.greenbus.edge.proto.SampleValue
-import io.greenbus.edge.{ Path, Value, ValueBool, ValueDouble }
-class PvSim(params: PvParams, initialState: PvState) extends SimulatorComponent {
+class PvSim(params: PvParams, initialState: PvState, publisher: PvPublisher) extends SimulatorComponent {
 
   private var state = initialState
-  private var paramsPublished = false
 
   def currentState: PvState = state
 
-  private val queue = new SimEventQueue
-  def eventQueue: EventQueue = queue
+  publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
 
-  def updates(line: LineState, time: Long): Seq[SimUpdate] = {
-    val data = Seq(
-      TimeSeriesUpdate(PvMapping.faultStatus, ValueBool(state.fault)),
-      TimeSeriesUpdate(PvMapping.pvOutputPower, ValueDouble(atTime(time))),
-      TimeSeriesUpdate(PvMapping.pvCapacity, ValueDouble(params.curve.b)))
+  def updates(line: LineState, time: Long): Unit = {
+    publisher.pvOutputPower.update(ValueDouble(atTime(time)), time)
+    publisher.pvCapacity.update(ValueDouble(params.curve.b), time)
+    publisher.faultStatus.update(ValueBool(state.fault), time)
+    publisher.buffer.flush()
+  }
 
-    val info = if (!paramsPublished) {
-      Seq(SeqValueUpdate(PvMapping.params, ValueString(Json.toJson(params).toString(), Some("application/json"))))
-    } else {
-      Seq()
+  publisher.faultEnableReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      onFaultEnable()
+      respond(OutputSuccess(None))
     }
+  })
 
-    data ++ info
-  }
-
-  def handlers: Map[Path, (Option[Value]) => Boolean] = {
-    Map(
-      (PvMapping.faultEnable, { _: Option[Value] => onFaultEnable() }),
-      (PvMapping.faultDisable, { _: Option[Value] => onFaultDisable() }))
-  }
+  publisher.faultDisableReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      onFaultDisable()
+      respond(OutputSuccess(None))
+    }
+  })
 
   def atTime(now: Long): Double = {
     if (!state.fault) {
@@ -126,7 +124,9 @@ class PvSim(params: PvParams, initialState: PvState) extends SimulatorComponent 
   }
 
   private def onFaultEnable(): Boolean = {
-    queue.enqueue(PvMapping.events, TopicEvent(Path(Seq("fault", "occur")), Some(ValueString("Fault occurred"))))
+    publisher.events.update(Path(Seq("fault", "occur")), ValueString("Fault occurred"), System.currentTimeMillis())
+    publisher.buffer.flush()
+
     if (!state.fault) {
       state = state.copy(fault = true)
       true
@@ -135,7 +135,9 @@ class PvSim(params: PvParams, initialState: PvState) extends SimulatorComponent 
     }
   }
   private def onFaultDisable(): Boolean = {
-    queue.enqueue(PvMapping.events, TopicEvent(Path(Seq("fault", "clear")), Some(ValueString("Fault cleared"))))
+    publisher.events.update(Path(Seq("fault", "clear")), ValueString("Fault cleared"), System.currentTimeMillis())
+    publisher.buffer.flush()
+
     if (state.fault) {
       state = state.copy(fault = false)
       true

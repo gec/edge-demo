@@ -18,7 +18,8 @@
  */
 package io.greenbus.edge.demo.sim
 
-import io.greenbus.edge.{ Path, Value, ValueDouble }
+import io.greenbus.edge.api.{ Path, Value, ValueBool, ValueDouble }
+import io.greenbus.edge.demo.sim.EndpointBuilders.LoadPublisher
 
 object LoadParams {
   import play.api.libs.json._
@@ -52,8 +53,8 @@ object LoadSim {
 }
 
 import LoadSim._
-import io.greenbus.edge.Path
-class LoadSim(params: LoadParams, data: LoadRecord, initialState: LoadState) extends SimulatorComponent {
+import io.greenbus.edge.api.Path
+class LoadSim(params: LoadParams, data: LoadRecord, initialState: LoadState, publisher: LoadPublisher) extends SimulatorComponent {
 
   private val stageReduction1 = params.stageReduction1.getOrElse(0.95)
   private val stageReduction2 = params.stageReduction1.getOrElse(0.9)
@@ -61,24 +62,20 @@ class LoadSim(params: LoadParams, data: LoadRecord, initialState: LoadState) ext
 
   private var state = initialState
 
-  private val queue = new SimEventQueue
-  def eventQueue: EventQueue = queue
-
   def updateReductionStage(stage: Int): Unit = {
     state = state.copy(reductionStage = stage)
   }
 
-  def updates(line: LineState, time: Long): Seq[SimUpdate] = {
+  def updates(line: LineState, time: Long): Unit = {
     val power = valueAt(time)
     val kvars = power * 0.02
-    Seq(
-      TimeSeriesUpdate(LoadMapping.power, ValueDouble(power)),
-      TimeSeriesUpdate(LoadMapping.current, ValueDouble(line.current)),
-      TimeSeriesUpdate(LoadMapping.voltage, ValueDouble(line.voltage)),
-      TimeSeriesUpdate(LoadMapping.kvar, ValueDouble(kvars)))
-  }
 
-  def handlers: Map[Path, (Option[Value]) => Boolean] = Map()
+    publisher.power.update(ValueDouble(power), time)
+    publisher.current.update(ValueDouble(line.current), time)
+    publisher.voltage.update(ValueDouble(line.voltage), time)
+    publisher.kvar.update(ValueDouble(kvars), time)
+    publisher.buffer.flush()
+  }
 
   def valueAt(time: Long): Double = {
 

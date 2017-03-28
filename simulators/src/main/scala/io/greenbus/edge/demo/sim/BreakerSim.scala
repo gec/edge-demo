@@ -19,6 +19,8 @@
 package io.greenbus.edge.demo.sim
 
 import io.greenbus.edge._
+import io.greenbus.edge.api._
+import io.greenbus.edge.demo.sim.EndpointBuilders.BreakerPublisher
 
 object BreakerMapping {
 
@@ -39,37 +41,45 @@ object BreakerMapping {
   val commandTypes = Seq(bkrTrip, bkrClose)
 }
 
-class BreakerSim(initial: Boolean) extends SimulatorComponent {
+class BreakerSim(initial: Boolean, publisher: BreakerPublisher) extends SimulatorComponent {
 
   private var bkrStatus: Boolean = initial
 
-  private val queue = new SimEventQueue
-  def eventQueue: EventQueue = queue
-
   def status: Boolean = bkrStatus
 
-  def updates(line: LineState, time: Long): Seq[SimUpdate] = {
-    Seq(
-      TimeSeriesUpdate(BreakerMapping.bkrStatus, ValueBool(bkrStatus)),
-      TimeSeriesUpdate(BreakerMapping.bkrPower, ValueDouble(line.power)),
-      TimeSeriesUpdate(BreakerMapping.bkrVoltage, ValueDouble(line.voltage)),
-      TimeSeriesUpdate(BreakerMapping.bkrCurrent, ValueDouble(line.current)))
+  def updates(line: LineState, time: Long): Unit = {
+
+    publisher.bkrStatus.update(ValueBool(bkrStatus), time)
+    publisher.bkrPower.update(ValueDouble(line.power), time)
+    publisher.bkrVoltage.update(ValueDouble(line.voltage), time)
+    publisher.bkrCurrent.update(ValueDouble(line.current), time)
+
+    publisher.buffer.flush()
   }
 
-  def handlers: Map[Path, (Option[Value]) => Boolean] = {
+  publisher.bkrTripReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      handleTrip()
+      respond(OutputSuccess(None))
+    }
+  })
 
-    Map(
-      (BreakerMapping.bkrTrip, { _: Option[Value] => handleTrip() }),
-      (BreakerMapping.bkrClose, { _: Option[Value] => handleClose() }))
-  }
+  publisher.bkrCloseReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      handleClose()
+      respond(OutputSuccess(None))
+    }
+  })
 
   def handleTrip(): Boolean = {
-    queue.enqueue(BreakerMapping.events, TopicEvent(Path(Seq("breaker", "trip")), Some(ValueString("Breaker tripped"))))
+    publisher.events.update(Path(Seq("breaker", "trip")), ValueString("Breaker tripped"), System.currentTimeMillis())
+    publisher.buffer.flush()
     bkrStatus = false
     true
   }
   def handleClose(): Boolean = {
-    queue.enqueue(BreakerMapping.events, TopicEvent(Path(Seq("breaker", "close")), Some(ValueString("Breaker closed"))))
+    publisher.events.update(Path(Seq("breaker", "close")), ValueString("Breaker closed"), System.currentTimeMillis())
+    publisher.buffer.flush()
     bkrStatus = true
     true
   }

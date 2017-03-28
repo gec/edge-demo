@@ -18,7 +18,10 @@
  */
 package io.greenbus.edge.demo.sim
 
-import io.greenbus.edge._
+import io.greenbus.edge.api._
+import io.greenbus.edge.demo.sim.EndpointBuilders.ChpPublisher
+import io.greenbus.edge.flow
+import play.api.libs.json.Json
 
 object ChpParams {
   import play.api.libs.json._
@@ -67,34 +70,35 @@ object ChpSim {
   }
 }
 import ChpSim._
-class ChpSim(params: ChpParams, initialState: ChpState) extends SimulatorComponent {
+class ChpSim(params: ChpParams, initialState: ChpState, publisher: ChpPublisher) extends SimulatorComponent {
 
   private var state = initialState
 
   def currentState: ChpState = state
 
-  private val queue = new SimEventQueue
-  def eventQueue: EventQueue = queue
+  publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
 
-  def updates(line: LineState, time: Long): Seq[SimUpdate] = {
-    Seq(
-      TimeSeriesUpdate(ChpMapping.power, ValueDouble(state.currentValue)),
-      TimeSeriesUpdate(ChpMapping.powerTarget, ValueDouble(state.outputTarget)),
-      TimeSeriesUpdate(ChpMapping.powerCapacity, ValueDouble(params.powerCapacity)),
-      TimeSeriesUpdate(ChpMapping.faultStatus, ValueBool(state.fault)))
+  def updates(line: LineState, time: Long): Unit = {
+    publisher.power.update(ValueDouble(state.currentValue), time)
+    publisher.powerTarget.update(ValueDouble(state.outputTarget), time)
+    publisher.powerCapacity.update(ValueDouble(params.powerCapacity), time)
+    publisher.faultStatus.update(ValueBool(state.fault), time)
+    publisher.buffer.flush()
   }
 
-  def handlers: Map[Path, (Option[Value]) => Boolean] = {
-
-    def chargeRateHandler(vOpt: Option[Value]): Boolean = {
-      vOpt.flatMap(Utils.valueAsDouble).exists(onTargetUpdate)
+  publisher.faultEnableReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      onFaultEnable()
+      respond(OutputSuccess(None))
     }
+  })
 
-    Map(
-      (ChpMapping.setTarget, chargeRateHandler _),
-      (ChpMapping.faultEnable, { _: Option[Value] => onFaultEnable() }),
-      (ChpMapping.faultDisable, { _: Option[Value] => onFaultDisable() }))
-  }
+  publisher.faultDisableReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      onFaultDisable()
+      respond(OutputSuccess(None))
+    }
+  })
 
   def tick(deltaMs: Long): Unit = {
     if (!state.fault && state.currentValue != state.outputTarget) {
@@ -116,7 +120,9 @@ class ChpSim(params: ChpParams, initialState: ChpState) extends SimulatorCompone
   }
 
   private def onFaultEnable(): Boolean = {
-    queue.enqueue(ChpMapping.events, TopicEvent(Path(Seq("fault", "occur")), Some(ValueString("Fault occurred"))))
+    publisher.events.update(Path(Seq("fault", "occur")), ValueString("Fault occurred"), System.currentTimeMillis())
+    publisher.buffer.flush()
+
     if (!state.fault) {
       state = state.copy(fault = true)
       true
@@ -125,7 +131,9 @@ class ChpSim(params: ChpParams, initialState: ChpState) extends SimulatorCompone
     }
   }
   private def onFaultDisable(): Boolean = {
-    queue.enqueue(ChpMapping.events, TopicEvent(Path(Seq("fault", "clear")), Some(ValueString("Fault cleared"))))
+    publisher.events.update(Path(Seq("fault", "clear")), ValueString("Fault cleared"), System.currentTimeMillis())
+    publisher.buffer.flush()
+
     if (state.fault) {
       state = state.copy(fault = false)
       true
@@ -135,7 +143,9 @@ class ChpSim(params: ChpParams, initialState: ChpState) extends SimulatorCompone
   }
 
   private def onTargetUpdate(rate: Double): Boolean = {
-    queue.enqueue(ChpMapping.events, TopicEvent(Path(Seq("output", "target")), Some(ValueString("Charge rate target updated: " + rate))))
+    publisher.events.update(Path(Seq("output", "target")), ValueString("Charge rate target updated: " + rate), System.currentTimeMillis())
+    publisher.buffer.flush()
+
     val boundTarget = boundTargetRate(rate, params)
     if (boundTarget != state.outputTarget) {
       state = state.copy(outputTarget = boundTarget)

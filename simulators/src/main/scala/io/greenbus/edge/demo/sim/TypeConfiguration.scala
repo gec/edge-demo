@@ -18,16 +18,38 @@
  */
 package io.greenbus.edge.demo.sim
 
-import io.greenbus.edge.channel.Sink
-import io.greenbus.edge._
-import io.greenbus.edge.client.{ ClientEndpointPublisherDesc, MetadataDesc, TimeSeriesValueEntry }
+import io.greenbus.edge.api._
 
 sealed trait SimUpdate
 case class TimeSeriesUpdate(path: Path, v: SampleValue) extends SimUpdate
 case class SeqValueUpdate(path: Path, v: Value) extends SimUpdate
 
 trait SimulatorComponent {
-  def updates(line: LineState, time: Long): Seq[SimUpdate]
-  def handlers: Map[Path, Option[Value] => Boolean]
-  def eventQueue: EventQueue
+  def updates(line: LineState, time: Long): Unit
+}
+
+case class TopicEvent(topic: Path, value: Value, timeMs: Long)
+
+trait UpdateHandler {
+  def handle(path: Path, update: SimUpdate): Unit
+}
+
+//class DoubleSeriesHandler
+
+class SimEventQueue extends EventQueue {
+  private var q = Vector.empty[(Path, TopicEvent)]
+
+  def enqueue(path: Path, topicEvent: TopicEvent): Unit = {
+    q = q :+ ((path, topicEvent))
+  }
+
+  def dequeue(): Seq[(Path, TopicEvent)] = {
+    val all = q
+    q = Vector.empty[(Path, TopicEvent)]
+    all
+  }
+}
+
+trait EventQueue {
+  def dequeue(): Seq[(Path, TopicEvent)]
 }

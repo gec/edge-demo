@@ -18,8 +18,10 @@
  */
 package io.greenbus.edge.demo.sim
 
-import io.greenbus.edge._
-import io.greenbus.edge.channel.Sink
+import io.greenbus.edge.api._
+import io.greenbus.edge.demo.sim.EndpointBuilders.EssPublisher
+import io.greenbus.edge.flow
+import play.api.libs.json.Json
 
 object EssMapping {
 
@@ -124,46 +126,61 @@ object EssSim {
   }
 }
 import EssSim._
-class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState) extends SimulatorComponent {
+class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState, publisher: EssPublisher) extends SimulatorComponent {
 
   private var state = initialState
 
-  private val queue = new SimEventQueue
-  def eventQueue: EventQueue = queue
-
   def currentState: EssState = state
 
-  def updates(line: LineState, time: Long): Seq[SimUpdate] = {
-    Seq(
-      TimeSeriesUpdate(EssMapping.percentSoc, ValueDouble(EssSim.calcSoc(params, state))),
-      TimeSeriesUpdate(EssMapping.socMax, ValueDouble(params.socMax)),
-      TimeSeriesUpdate(EssMapping.socMin, ValueDouble(params.socMin)),
-      TimeSeriesUpdate(EssMapping.chargeDischargeRate, ValueDouble(state.output)),
-      TimeSeriesUpdate(EssMapping.chargeRateMax, ValueDouble(params.maxChargeRate)),
-      TimeSeriesUpdate(EssMapping.dischargeRateMax, ValueDouble(params.maxDischargeRate)),
-      TimeSeriesUpdate(EssMapping.capacity, ValueDouble(params.capacity)),
-      TimeSeriesUpdate(EssMapping.efficiency, ValueDouble(params.efficiency)),
-      TimeSeriesUpdate(EssMapping.chargeRateTarget, ValueDouble(state.target)),
-      TimeSeriesUpdate(EssMapping.mode, ValueUInt64(state.mode.numeric)),
-      TimeSeriesUpdate(EssMapping.faultStatus, ValueBool(state.fault)))
+  publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
+
+  def updates(line: LineState, time: Long): Unit = {
+    publisher.percentSoc.update(ValueDouble(EssSim.calcSoc(params, state)), time)
+    publisher.socMax.update(ValueDouble(params.socMax), time)
+    publisher.socMin.update(ValueDouble(params.socMin), time)
+    publisher.chargeDischargeRate.update(ValueDouble(state.output), time)
+    publisher.chargeRateMax.update(ValueDouble(params.maxChargeRate), time)
+    publisher.dischargeRateMax.update(ValueDouble(params.maxDischargeRate), time)
+    publisher.capacity.update(ValueDouble(params.capacity), time)
+    publisher.efficiency.update(ValueDouble(params.efficiency), time)
+    publisher.chargeRateTarget.update(ValueDouble(state.target), time)
+    publisher.mode.update(ValueUInt64(state.mode.numeric), time)
+    publisher.faultStatus.update(ValueBool(state.fault), time)
+    publisher.buffer.flush()
   }
 
-  def handlers: Map[Path, (Option[Value]) => Boolean] = {
-    import EssMapping._
-
-    def chargeRateHandler(vOpt: Option[Value]): Boolean = {
-      vOpt.flatMap(Utils.valueAsDouble).exists(onTargetChargeRateUpdate)
+  publisher.setChargeRateReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      obj.outputValueOpt.foreach {
+        case ValueDouble(v) => onTargetChargeRateUpdate(v)
+        case _ =>
+      }
+      respond(OutputSuccess(None))
     }
-    def setModeHandler(vOpt: Option[Value]): Boolean = {
-      vOpt.flatMap(Utils.valueAsInt).map(_.toInt).exists(onModeUpdate)
-    }
+  })
 
-    Map(
-      (setChargeRate, chargeRateHandler _),
-      (setBatteryMode, setModeHandler _),
-      (faultEnable, { _: Option[Value] => onFaultEnable() }),
-      (faultDisable, { _: Option[Value] => onFaultDisable() }))
-  }
+  publisher.batteryModeReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      obj.outputValueOpt.foreach { v =>
+        Utils.valueAsInt(v).foreach(mode => onModeUpdate(mode.toInt))
+      }
+      respond(OutputSuccess(None))
+    }
+  })
+
+  publisher.faultEnableReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      onFaultEnable()
+      respond(OutputSuccess(None))
+    }
+  })
+
+  publisher.faultDisableReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      onFaultDisable()
+      respond(OutputSuccess(None))
+    }
+  })
 
   def tick(deltaMs: Long): Unit = {
     if (!state.fault) {
@@ -193,7 +210,8 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
   }
 
   private def onModeUpdate(mode: Int): Boolean = {
-    queue.enqueue(EssMapping.events, TopicEvent(Path(Seq("output", "mode")), Some(ValueString("Mode updated: " + EssMode.parse(mode).getOrElse("Unknown")))))
+    publisher.events.update(Path(Seq("output", "mode")), ValueString("Mode updated: " + EssMode.parse(mode).getOrElse("Unknown")), System.currentTimeMillis())
+    publisher.buffer.flush()
     EssMode.parse(mode).foreach {
       case modeUpdate @ Constant => state = state.copy(mode = modeUpdate, output = if (!state.fault) state.target else 0.0)
       case modeUpdate => state = state.copy(mode = modeUpdate)
@@ -202,7 +220,8 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
   }
 
   private def onTargetChargeRateUpdate(target: Double): Boolean = {
-    queue.enqueue(EssMapping.events, TopicEvent(Path(Seq("output", "target")), Some(ValueString("Charge rate target updated."))))
+    publisher.events.update(Path(Seq("output", "target")), ValueString("Charge rate target updated."), System.currentTimeMillis())
+    publisher.buffer.flush()
 
     state.mode match {
       case Constant =>
@@ -225,7 +244,9 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
   }
 
   private def onFaultEnable(): Boolean = {
-    queue.enqueue(EssMapping.events, TopicEvent(Path(Seq("fault", "occur")), Some(ValueString("Fault occurred"))))
+    publisher.events.update(Path(Seq("fault", "occur")), ValueString("Fault occurred"), System.currentTimeMillis())
+    publisher.buffer.flush()
+
     if (!state.fault) {
       state = state.copy(fault = true)
       true
@@ -234,7 +255,9 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
     }
   }
   private def onFaultDisable(): Boolean = {
-    queue.enqueue(EssMapping.events, TopicEvent(Path(Seq("fault", "clear")), Some(ValueString("Fault cleared"))))
+    publisher.events.update(Path(Seq("fault", "clear")), ValueString("Fault cleared"), System.currentTimeMillis())
+    publisher.buffer.flush()
+
     if (state.fault) {
       state = state.copy(fault = false)
       true
@@ -243,22 +266,4 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
     }
   }
 
-}
-
-class SimEventQueue extends EventQueue {
-  private var q = Vector.empty[(Path, TopicEvent)]
-
-  def enqueue(path: Path, topicEvent: TopicEvent): Unit = {
-    q = q :+ ((path, topicEvent))
-  }
-
-  def dequeue(): Seq[(Path, TopicEvent)] = {
-    val all = q
-    q = Vector.empty[(Path, TopicEvent)]
-    all
-  }
-}
-
-trait EventQueue {
-  def dequeue(): Seq[(Path, TopicEvent)]
 }

@@ -22,44 +22,31 @@ import java.util.UUID
 
 import akka.actor.{ Actor, Props }
 import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge.{ CallMarshaller, PersistenceSessionId }
-import io.greenbus.edge.client.EdgeConnection
+import io.greenbus.edge.peer.ProducerServices
+import io.greenbus.edge.thread.CallMarshaller
 
 import scala.concurrent.duration._
 
 object SimulatorActor {
 
-  case object DoSetup
-  case class Connected(conn: EdgeConnection)
   case object Tick
 
-  def props(ctx: SimulatorContext): Props = {
-    Props(classOf[SimulatorActor], ctx)
+  def props(ctx: SimulatorContext, service: ProducerServices): Props = {
+    Props(classOf[SimulatorActor], ctx, service)
   }
 
 }
-class SimulatorActor(ctx: SimulatorContext) extends Actor with CallMarshalActor with LazyLogging {
+class SimulatorActor(ctx: SimulatorContext, service: ProducerServices) extends Actor with CallMarshalActor with LazyLogging {
   import SimulatorActor._
 
-  private val sessionId = PersistenceSessionId(UUID.randomUUID(), 0)
-  private val mgr = new SimulatorMgr(marshaller, LoadParser.fromFile("data/olney-2014-load-hourly.tsv"), ctx)
-  private val publishers = mgr.publishers
+  private val mgr = new SimulatorMgr(marshaller, LoadParser.fromFile("data/olney-2014-load-hourly.tsv"), ctx, service)
 
-  self ! DoSetup
+  self ! Tick
 
   def receive = {
-    case DoSetup => {
-      mgr.setup()
-      mgr.tick()
-      scheduleMsg(1000, Tick)
-    }
     case Tick => {
       mgr.tick()
       scheduleMsg(1000, Tick)
-    }
-    case Connected(conn) => {
-      logger.info("Got edge connection")
-      val futs = publishers.map { case (id, pub) => conn.connectPublisher(id, sessionId, pub) }
     }
     case MarshalledCall(f) => f()
   }

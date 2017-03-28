@@ -39,12 +39,12 @@ object EdgeGui {
 
     val service = AmqpService.build()
 
-    val linkMgr = system.actorOf(PeerLinkMgr.props)
+    /*  val linkMgr = system.actorOf(PeerLinkMgr.props)
 
     PeerLinkMgr.connect(service, "127.0.0.1", 50001).foreach(c => linkMgr ! PeerLinkMgr.Connected(c))
 
     val mgr = new GuiSocketMgr(linkMgr)
-    globalSocketMgr.set(mgr)
+    globalSocketMgr.set(mgr)*/
 
     val server = new EdgeGuiServer(8080)
     server.run()

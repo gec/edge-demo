@@ -20,8 +20,7 @@ package io.greenbus.edge.demo.sim
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import io.greenbus.edge.amqp.impl.AmqpIoImpl
-import io.greenbus.edge.client.EdgeConnectionImpl
+import io.greenbus.edge.peer.AmqpEdgeService
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -29,18 +28,6 @@ import scala.concurrent.duration._
 object EdgeSimulators {
 
   def main(args: Array[String]): Unit = {
-    val service = new AmqpIoImpl()
-
-    val connFut = service.connect("127.0.0.1", 50001, 10000)
-
-    val conn = Await.result(connFut, 5000.milliseconds)
-
-    val sessionFut = conn.open()
-
-    val session = Await.result(sessionFut, 5000.milliseconds)
-
-    val edgeConnection = new EdgeConnectionImpl(service.eventLoop, session)
-    println("connected")
 
     val rootConfig = ConfigFactory.load()
     val slf4jConfig = ConfigFactory.parseString("""akka { loggers = ["akka.event.slf4j.Slf4jLogger"] }""")
@@ -50,9 +37,14 @@ object EdgeSimulators {
     val ctx = SimulatorContext(
       equipmentPrefix = Seq("Rankin", "MGRID"))
 
-    val sim = system.actorOf(SimulatorActor.props(ctx))
+    import system.dispatcher
 
-    sim ! SimulatorActor.Connected(edgeConnection)
+    val services = AmqpEdgeService.build("127.0.0.1", 50001, 10000)
+    services.start()
+    val producerServices = services.producer
+    println("connected")
+
+    val sim = system.actorOf(SimulatorActor.props(ctx, producerServices))
 
   }
 }
