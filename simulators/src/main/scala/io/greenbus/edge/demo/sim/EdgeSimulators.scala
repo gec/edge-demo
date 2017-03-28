@@ -42,7 +42,6 @@ object EdgeSimulators {
     val services = AmqpEdgeService.build("127.0.0.1", 50001, 10000)
     services.start()
     val producerServices = services.producer
-    println("connected")
 
     val sim = system.actorOf(SimulatorActor.props(ctx, producerServices))
 

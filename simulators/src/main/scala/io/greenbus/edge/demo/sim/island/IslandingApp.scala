@@ -18,17 +18,17 @@
  */
 package io.greenbus.edge.demo.sim.island
 
-import java.util.UUID
-
-import akka.actor.{ Actor, Props }
 import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge._
-import io.greenbus.edge.client._
+import io.greenbus.edge.api._
+import io.greenbus.edge.api.stream.ServiceClient
 import io.greenbus.edge.demo.sim.EssSim.GridForming
-import io.greenbus.edge.demo.sim.{ TimeSeriesUpdate => _, _ }
-import play.api.libs.json.Json
+import io.greenbus.edge.demo.sim.{ BreakerMapping, ChpMapping, EssMapping, EssSim }
+import io.greenbus.edge.flow
+import io.greenbus.edge.flow.Sender
+import io.greenbus.edge.thread.CallMarshaller
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ Future, Promise }
 
 object ControlParams {
   import play.api.libs.json._
@@ -37,284 +37,123 @@ object ControlParams {
 }
 case class ControlParams(microgridName: String, chpRampedUp: Double, chpNominal: Double, chargingBatteryRate: Double)
 
-object IslandingApp {
-  import io.greenbus.edge.demo.sim.EndpointUtils._
+object SenderHelpers {
 
-  val eventsKey = Path("Events")
-  val paramsKey = Path("Params")
-  val enabledKey = Path("IsEnabled")
-
-  val setEnableKey = Path("SetEnable")
-  val setDisableKey = Path("SetDisable")
-
-  val boolMappingKey = Path("boolMapping")
-
-  val enabledMapping = ValueArray(Vector(
-    ValueObject(Map(
-      "value" -> ValueBool(false),
-      "name" -> ValueString("Disabled"))),
-    ValueObject(Map(
-      "value" -> ValueBool(true),
-      "name" -> ValueString("Enabled")))))
-  val enabledMappingKv = boolMappingKey -> enabledMapping
-
-  def buildPublisherDesc(params: ControlParams): ClientEndpointPublisherDesc = {
-    val now = System.currentTimeMillis()
-
-    val indexes = Map(Path("role") -> ValueSimpleString("application"))
-    val meta = Map.empty[Path, Value]
-
-    val latestKvs = Map(
-      paramsKey -> kv(ValueString(Json.toJson(params).toString(), Some("application/json"))))
-
-    val events = Map(eventsKey -> EventEntry(MetadataDesc(Map(), Map())))
-
-    val activeSets = Map.empty[Path, ActiveSetConfigEntry]
-
-    val timeSeries = Map(
-      /*ChpMapping.power -> tsDouble(0.0, now, indexes = Map(Path("gridValueType") -> ValueSimpleString(outputPowerType)), meta = Map(Path("unit") -> ValueString("kW"))),*/
-      enabledKey -> tsBool(false, now, indexes = Map(Path("applicationStatusType") -> ValueSimpleString("enabled")), meta = Map(enabledMappingKv)))
-
-    val outputs = Map(
-      setEnableKey -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))),
-      setDisableKey -> OutputEntry(PublisherOutputValueStatus(0, None), MetadataDesc(Map(), Map(Path("simpleInputType") -> ValueString("indication")))))
-
-    ClientEndpointPublisherDesc(indexes, meta, latestKvs, timeSeries, events, activeSets, outputs)
+  def request[A, B](sender: Sender[A, B], obj: A): Future[B] = {
+    val promise = Promise[B]
+    sender.send(obj, promise.complete)
+    promise.future
   }
 
-  case object DoInit
-  case class GotPublisherConnection(conn: EndpointPublisherConnection)
-  case class ConnectionError(ex: Throwable)
-  case object Enabled
-  case object Disabled
-  case class SetSubscription(edgeSubscription: EdgeSubscription)
-  case class DataSubscription(edgeSubscription: EdgeSubscription)
-  case class GotOutputClient(client: EdgeOutputClient)
-
-  def props(connection: EdgeConnection, endpointId: EndpointId, params: ControlParams): Props = {
-    Props(classOf[IslandingApp], connection, endpointId, params)
-  }
 }
 
-class IslandingApp(connection: EdgeConnection, endpointId: EndpointId, params: ControlParams) extends Actor with CallMarshalActor with LazyLogging {
-  import IslandingApp._
+class IslandingApp(eventThread: CallMarshaller, publisher: IslandAppPublisher, subscriber: IslandAppSubscriber, services: ServiceClient, params: ControlParams) extends LazyLogging {
 
-  import context.dispatcher
-
-  private val sessionId = PersistenceSessionId(UUID.randomUUID(), 0)
   private var enabled = false
-  private var connected = true
-  private var pccConnected = true
-  private val publisher = new EndpointPublisherImpl(this.marshaller, endpointId, buildPublisherDesc(params))
-  private var publisherConnOpt = Option.empty[EndpointPublisherConnection]
+  private var pccClosed = true
 
-  private var outputClientOpt = Option.empty[EdgeOutputClient]
+  def init(): Unit = {
+    publisher.enabled.update(ValueBool(enabled), System.currentTimeMillis())
+    publisher.flush()
+  }
 
-  private var breakerSet = Map.empty[EndpointPath, Option[Boolean]]
-  private var setSub = Option.empty[EdgeSubscription]
-  private var dataSub = Option.empty[EdgeSubscription]
-
-  publisher.outputReceiver.bind(handleOutput)
-
-  self ! DoInit
-
-  def receive = {
-    case DoInit => {
-      val connectFut = connection.connectPublisher(endpointId, sessionId, publisher)
-      connectFut.foreach(conn => self ! GotPublisherConnection(conn))
-      connectFut.failed.foreach(ex => self ! ConnectionError(ex))
-
-      val outputClientFut = connection.openOutputClient()
-      outputClientFut.foreach(cl => self ! GotOutputClient(cl))
-      outputClientFut.failed.foreach(ex => self ! ConnectionError(ex))
-
-      doIndexSub()
+  publisher.setEnableRcv.bind(new flow.Responder[OutputParams, OutputResult] {
+    override def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      respond(OutputSuccess(None))
+      handleEnable()
     }
-    case ConnectionError(ex) => logger.error("CONNECTION ERROR: " + ex)
-    case GotPublisherConnection(conn) => {
-      publisherConnOpt = Some(conn)
-    }
-    case GotOutputClient(cl) => {
-      outputClientOpt = Some(cl)
-      //doCheck()
-    }
-    case SetSubscription(sub) => {
-      setSub = Some(sub)
-      sub.notifications.bind { notification =>
-        this.marshaller.marshal {
-          notification.indexNotification.dataKeyNotifications.foreach { keyNot =>
-            keyNot.snapshot.foreach { pathSet =>
-              breakerSet = pathSet.map(p => p -> Option.empty[Boolean]).toMap
-              doDataSub(pathSet)
-            }
-          }
-        }
-      }
+  })
 
+  publisher.setDisableRcv.bind(new flow.Responder[OutputParams, OutputResult] {
+    override def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      respond(OutputSuccess(None))
+      handleDisable()
     }
-    case DataSubscription(sub) => {
-      dataSub = Some(sub)
-      sub.notifications.bind(not => this.marshaller.marshal { handleDataNotification(not) })
+  })
+
+  private def handleState(state: BreakerStates): Unit = {
+    if (pccClosed && !state.pcc) {
+      onTrip()
+      pccClosed = false
+    } else if (!pccClosed && state.pcc) {
+      pccClosed = true
+      onClose()
     }
-    case Enabled =>
-      enabled = true
-      pushTimeSeries(enabledKey, ValueBool(true))
-      postEvent(Seq("application", "status"), "Application enabled")
+  }
+
+  private def onTrip(): Unit = {
+
+    val tripPath = EndpointPath(EndpointId(Path(Seq("Rankin", "MGRID", "CUST_BKR"))), BreakerMapping.bkrTrip)
+    val tripFut = SenderHelpers.request(services, OutputRequest(tripPath, OutputParams()))
+
+    val battEndPath = EndpointPath(EndpointId(Path(Seq("Rankin", "MGRID", "ESS"))), EssMapping.setBatteryMode)
+    val battFut = SenderHelpers.request(services, OutputRequest(battEndPath, OutputParams(outputValueOpt = Some(ValueUInt32(GridForming.numeric)))))
+
+    val chpEndPath = EndpointPath(EndpointId(Path(Seq("Rankin", "MGRID", "CHP"))), ChpMapping.setTarget)
+    val chpFut = SenderHelpers.request(services, OutputRequest(chpEndPath, OutputParams(outputValueOpt = Some(ValueDouble(params.chpRampedUp)))))
+
+    publisher.events.update(Path(Seq("application", "action")), ValueString("Executed actions on PCC trip"), System.currentTimeMillis())
+    publisher.flush()
+
+    val allFut = Future.sequence(Seq(tripFut, battFut, chpFut))
+
+    allFut.foreach { results =>
+      logger.info("Commands successful: " + results)
+      publisher.events.update(Path(Seq("application", "action")), ValueString("Executed actions on PCC trip success"), System.currentTimeMillis())
       publisher.flush()
-    //doCheck()
-    case Disabled =>
-      enabled = false
-      pushTimeSeries(enabledKey, ValueBool(false))
-      postEvent(Seq("application", "status"), "Application disabled")
+    }
+
+    allFut.failed.foreach { results =>
+      logger.info("Commands failued: " + results)
+      publisher.events.update(Path(Seq("application", "action")), ValueString("Executed actions on PCC trip failure"), System.currentTimeMillis())
       publisher.flush()
-    case MarshalledCall(f) => f()
-  }
-
-  private def pushTimeSeries(key: Path, value: SampleValue): Unit = {
-    publisher.timeSeriesStreams.get(key).foreach(_.push(TimeSeriesSample(System.currentTimeMillis(), value)))
-  }
-
-  private def postEvent(topic: Seq[String], text: String): Unit = {
-    publisher.eventStreams.get(eventsKey).foreach { sink =>
-      sink.push(TopicEvent(Path(topic), Some(ValueString(text))))
     }
   }
 
-  /*private def doCheck(): Unit = {
-    val open = breakerSet.exists(_._2.contains(false))
-    if (enabled) {
-      if (connected && open) {
-        doOnTrip()
-      } else if (!connected && !open) {
-        doOnClose()
-      }
-    }
-    connected = !open
-  }*/
+  private def onClose(): Unit = {
 
-  private def doCheck(pccClosedUpdate: Boolean): Unit = {
-    //val open = breakerSet.exists(_._2.contains(false))
-    if (enabled) {
-      if (pccConnected && !pccClosedUpdate) {
-        doOnTrip()
-      } else if (!pccConnected && pccClosedUpdate) {
-        doOnClose()
-      }
-    }
-    pccConnected = pccClosedUpdate
-  }
+    val closePath = EndpointPath(EndpointId(Path(Seq("Rankin", "MGRID", "CUST_BKR"))), BreakerMapping.bkrClose)
+    val closeFut = SenderHelpers.request(services, OutputRequest(closePath, OutputParams()))
 
-  private def doOnTrip(): Unit = {
-    outputClientOpt match {
-      case Some(client) =>
+    val battId = EndpointId(Path(Seq("Rankin", "MGRID", "ESS")))
+    val battFut = SenderHelpers.request(services, OutputRequest(EndpointPath(battId, EssMapping.setBatteryMode), OutputParams(outputValueOpt = Some(ValueUInt32(EssSim.Constant.numeric)))))
+    val battSpFut = SenderHelpers.request(services, OutputRequest(EndpointPath(battId, EssMapping.setChargeRate), OutputParams(outputValueOpt = Some(ValueDouble(params.chargingBatteryRate)))))
 
-        val tripFut = client.issueOutput(EndpointPath(NamedEndpointId(Path(Seq("Rankin", "MGRID", "CUST_BKR"))), BreakerMapping.bkrTrip), ClientOutputParams())
+    val chpEndPath = EndpointPath(EndpointId(Path(Seq("Rankin", "MGRID", "CHP"))), ChpMapping.setTarget)
+    val chpFut = SenderHelpers.request(services, OutputRequest(chpEndPath, OutputParams(outputValueOpt = Some(ValueDouble(params.chpNominal)))))
 
-        val battEndPath = EndpointPath(NamedEndpointId(Path(Seq("Rankin", "MGRID", "ESS"))), EssMapping.setBatteryMode)
-        val battFut = client.issueOutput(battEndPath, ClientOutputParams(outputValueOpt = Some(ValueUInt32(GridForming.numeric))))
+    publisher.events.update(Path(Seq("application", "action")), ValueString("Executed actions on PCC close"), System.currentTimeMillis())
+    publisher.flush()
 
-        val chpEndPath = EndpointPath(NamedEndpointId(Path(Seq("Rankin", "MGRID", "CHP"))), ChpMapping.setTarget)
-        val chpFut = client.issueOutput(chpEndPath, ClientOutputParams(outputValueOpt = Some(ValueDouble(params.chpRampedUp))))
+    val allFut = Future.sequence(Seq(closeFut, battFut, battSpFut, chpFut))
 
-        postEvent(Seq("application", "action"), "Executed actions on PCC trip")
-        publisher.flush()
-
-        Future.sequence(Seq(tripFut, battFut, chpFut)).foreach { results =>
-          logger.info("commands successful: " + results)
-          postEvent(Seq("application", "action"), "Executed actions on PCC trip success")
-          publisher.flush()
-        }
-
-      case None =>
-        postEvent(Seq("application", "error"), "Observed islanding but output not configured")
-        publisher.flush()
+    allFut.foreach { results =>
+      logger.info("Commands successful: " + results)
+      publisher.events.update(Path(Seq("application", "action")), ValueString("Executed actions on PCC close success"), System.currentTimeMillis())
+      publisher.flush()
     }
 
-  }
-
-  private def doOnClose(): Unit = {
-    outputClientOpt match {
-      case Some(client) =>
-
-        val closeFut = client.issueOutput(EndpointPath(NamedEndpointId(Path(Seq("Rankin", "MGRID", "CUST_BKR"))), BreakerMapping.bkrClose), ClientOutputParams())
-
-        val battEndId = NamedEndpointId(Path(Seq("Rankin", "MGRID", "ESS")))
-        val battFut = client.issueOutput(EndpointPath(battEndId, EssMapping.setBatteryMode), ClientOutputParams(outputValueOpt = Some(ValueUInt32(EssSim.Constant.numeric))))
-        val battSpFut = client.issueOutput(EndpointPath(battEndId, EssMapping.setChargeRate), ClientOutputParams(outputValueOpt = Some(ValueDouble(params.chargingBatteryRate))))
-
-        val chpEndPath = EndpointPath(NamedEndpointId(Path(Seq("Rankin", "MGRID", "CHP"))), ChpMapping.setTarget)
-        val chpFut = client.issueOutput(chpEndPath, ClientOutputParams(outputValueOpt = Some(ValueDouble(params.chpNominal))))
-
-        postEvent(Seq("application", "action"), "Executed actions on PCC close")
-        publisher.flush()
-
-        Future.sequence(Seq(closeFut, battSpFut, battFut, chpFut)).foreach { results =>
-          logger.info("commands successful: " + results)
-          postEvent(Seq("application", "action"), "Executed actions on PCC close success")
-          publisher.flush()
-        }
-
-      case None =>
-        postEvent(Seq("application", "error"), "Observed reclose but output not configured")
-        publisher.flush()
+    allFut.failed.foreach { results =>
+      logger.info("Commands failued: " + results)
+      publisher.events.update(Path(Seq("application", "action")), ValueString("Executed actions on PCC close failure"), System.currentTimeMillis())
+      publisher.flush()
     }
   }
 
-  private def doDataSub(pathList: Set[EndpointPath]): Unit = {
-    dataSub.foreach(_.close())
-    val subFut = connection.openSubscription(ClientSubscriptionParams(dataSubscriptions = pathList.toVector))
-    subFut.foreach(sub => self ! DataSubscription(sub))
-    subFut.failed.foreach(ex => self ! ConnectionError(ex))
+  private def postEvent(path: Seq[String], value: String): Unit = {
+    publisher.events.update(Path(path), ValueString(value), System.currentTimeMillis())
   }
 
-  private def doIndexSub(): Unit = {
-    val specifier = IndexSpecifier(Path("gridValueType"), Some(ValueSimpleString(EndpointBuilders.bkrStatusType)))
-    val params = ClientSubscriptionParams(indexParams = ClientIndexSubscriptionParams(dataKeyIndexes = Seq(specifier)))
-
-    val subFut = connection.openSubscription(params)
-
-    subFut.foreach(sub => self ! SetSubscription(sub))
-    subFut.failed.foreach(ex => self ! ConnectionError(ex))
+  private def handleEnable(): Unit = {
+    enabled = true
+    postEvent(Seq("application", "status"), "Application enabled")
+    publisher.flush()
   }
 
-  private def handleDataNotification(notification: ClientSubscriptionNotification): Unit = {
-    notification.dataNotifications.foreach { dataNot =>
-      dataNot.value match {
-        case st: TimeSeriesState => st.values.lastOption.foreach(ts => handleValue(dataNot.key, ts.sample.value))
-        case up: TimeSeriesUpdate => up.values.lastOption.foreach(ts => handleValue(dataNot.key, ts.sample.value))
-        case _ =>
-          logger.warn("Unrecognized data notification: " + dataNot)
-      }
-
-    }
-  }
-
-  private def handleValue(path: EndpointPath, value: SampleValue): Unit = {
-    val pccPath = EndpointPath(NamedEndpointId(Path(Seq("Rankin", "MGRID", "PCC_BKR"))), BreakerMapping.bkrStatus)
-    if (path == pccPath) {
-      val nowClosed = value.toBoolean
-      doCheck(nowClosed)
-    }
-    /*if (breakerSet.contains(path)) {
-      breakerSet += (path -> Some(value.toBoolean))
-      doCheck()
-    }*/
-  }
-
-  private def handleOutput(batch: UserOutputRequestBatch): Unit = {
-    batch.requests.foreach { request =>
-      request.key match {
-        case `setEnableKey` =>
-          self ! Enabled
-          request.resultAsync(OutputSuccess(None))
-        case `setDisableKey` =>
-          self ! Disabled
-          request.resultAsync(OutputSuccess(None))
-        case _ =>
-          logger.warn("Unhandled output: " + request.key)
-          request.resultAsync(OutputFailure("Unsupported"))
-      }
-    }
+  private def handleDisable(): Unit = {
+    enabled = false
+    postEvent(Seq("application", "status"), "Application disabled")
+    publisher.flush()
   }
 
 }

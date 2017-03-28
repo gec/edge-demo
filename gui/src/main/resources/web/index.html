@@ -80,7 +80,7 @@
             <div class="col-md-3 sidebar">
                 <ul class="nav nav-sidebar">
                     <!--<li ng-repeat="elem in manifest"><a ng-href="#/endpoint?name={{elem.simpleName}}">{{elem.simpleName}}</a></li>-->
-                    <li ng-repeat="elem in manifest"><a ng-href="#/endpoint?name={{elem.simpleName}}">
+                    <li ng-repeat="elem in manifest | orderBy:'simpleName'"><a ng-href="#/endpoint?name={{elem.simpleName}}">
                         <span ng-repeat="part in elem.nameParts">
                             <span ng-if="!$last">{{part}} / </span>
                             <span ng-if="$last"><strong>{{part}}</strong></span>
