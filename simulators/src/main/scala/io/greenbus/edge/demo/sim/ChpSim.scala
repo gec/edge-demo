@@ -86,9 +86,19 @@ class ChpSim(params: ChpParams, initialState: ChpState, publisher: ChpPublisher)
     publisher.buffer.flush()
   }
 
-  publisher.faultEnableReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+  publisher.setTargetReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
     def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
       onFaultEnable()
+      respond(OutputSuccess(None))
+    }
+  })
+
+  publisher.faultEnableReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      obj.outputValueOpt.foreach {
+        case v: NumericConvertible => onTargetUpdate(v.toDouble)
+        case _ =>
+      }
       respond(OutputSuccess(None))
     }
   })

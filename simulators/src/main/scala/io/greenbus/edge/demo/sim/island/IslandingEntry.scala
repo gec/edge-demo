@@ -20,7 +20,7 @@ package io.greenbus.edge.demo.sim.island
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import io.greenbus.edge.api.{EndpointId, Path}
+import io.greenbus.edge.api.{ EndpointId, Path }
 import io.greenbus.edge.peer.AmqpEdgeService
 
 import scala.concurrent.Await

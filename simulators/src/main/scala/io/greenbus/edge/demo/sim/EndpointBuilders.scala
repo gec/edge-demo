@@ -169,6 +169,9 @@ object EndpointBuilders {
     val powerTarget = builder.seriesValue(ChpMapping.powerTarget, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputTargetType)), metadata = Map(Path("unit") -> ValueString("kW"))))
     val faultStatus = builder.seriesValue(ChpMapping.faultStatus, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(faultType)), metadata = Map(faultMappingKv)))
 
+    val setTarget = builder.outputStatus(ChpMapping.setTarget, KeyMetadata(Map(Path("gridValueType") -> ValueString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double"))))
+    val setTargetReceiver = builder.registerOutput(ChpMapping.setTarget)
+
     val faultEnable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
     val faultEnableReceiver = builder.registerOutput(ChpMapping.faultEnable)
     val faultDisable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
