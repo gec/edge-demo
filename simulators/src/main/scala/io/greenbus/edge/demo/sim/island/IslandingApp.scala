@@ -20,7 +20,6 @@ package io.greenbus.edge.demo.sim.island
 
 import com.typesafe.scalalogging.LazyLogging
 import io.greenbus.edge.api._
-import io.greenbus.edge.api.stream.ServiceClient
 import io.greenbus.edge.demo.sim.EssSim.GridForming
 import io.greenbus.edge.demo.sim.{ BreakerMapping, ChpMapping, EssMapping, EssSim }
 import io.greenbus.edge.flow

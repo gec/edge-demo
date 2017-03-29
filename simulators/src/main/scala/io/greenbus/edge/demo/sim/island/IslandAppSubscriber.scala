@@ -19,7 +19,7 @@
 package io.greenbus.edge.demo.sim.island
 
 import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge.api.{ EndpointPath, IndexSpecifier, Path, ValueString }
+import io.greenbus.edge.api._
 import io.greenbus.edge.api.stream._
 import io.greenbus.edge.demo.sim.EndpointBuilders
 import io.greenbus.edge.flow.{ QueuedDistributor, Source }
@@ -89,10 +89,10 @@ case class BreakerStates(pcc: Boolean, cust: Boolean)
 class IslandAppSubscriber(client: EdgeSubscriptionClient) extends LazyLogging {
   import IslandAppSubscriber._
 
-  private val pccIndexSub = client.subscribe(Seq(), Seq(), Seq(), IndexSubscriptionParams(dataKeyIndexes = Seq(pccSpecifier)))
+  private val pccIndexSub = client.subscribe(SubscriptionParams(indexing = IndexSubscriptionParams(dataKeyIndexes = Seq(pccSpecifier))))
   pccIndexSub.updates.bind(updates => handlePccIndexUpdate(filterSpecUpdate(pccSpecifier, updates)))
 
-  private val custIndexSub = client.subscribe(Seq(), Seq(), Seq(), IndexSubscriptionParams(dataKeyIndexes = Seq(custSpecifier)))
+  private val custIndexSub = client.subscribe(SubscriptionParams(indexing = IndexSubscriptionParams(dataKeyIndexes = Seq(custSpecifier))))
   custIndexSub.updates.bind(updates => handleCustIndexUpdate(filterSpecUpdate(custSpecifier, updates)))
 
   private var pccDataSubOpt = Option.empty[EdgeSubscription]
@@ -108,9 +108,8 @@ class IslandAppSubscriber(client: EdgeSubscriptionClient) extends LazyLogging {
     val keys = update.getOrElse(Set())
     if (keys.nonEmpty) {
       pccDataSubOpt.foreach(_.close())
-      val builder = SubscriptionBuilder.newBuilder
-      keys.foreach(builder.series)
-      val params = builder.build()
+
+      val params = SubscriptionParams(dataKeys = DataKeySubscriptionParams(series = keys.toSeq))
 
       if (keys.size > 1) {
         logger.warn(s"More than one PCC breaker status")
@@ -135,9 +134,8 @@ class IslandAppSubscriber(client: EdgeSubscriptionClient) extends LazyLogging {
     val keys = update.getOrElse(Set())
     if (keys.nonEmpty) {
       custDataSubOpt.foreach(_.close())
-      val builder = SubscriptionBuilder.newBuilder
-      keys.foreach(builder.series)
-      val params = builder.build()
+
+      val params = SubscriptionParams(dataKeys = DataKeySubscriptionParams(series = keys.toSeq))
 
       if (keys.size > 1) {
         logger.warn(s"More than one Cust breaker status")
