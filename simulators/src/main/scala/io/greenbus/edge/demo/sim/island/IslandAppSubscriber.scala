@@ -26,8 +26,6 @@ import io.greenbus.edge.flow.{ QueuedDistributor, Source }
 
 object IslandAppSubscriber {
 
-  //val specifier = IndexSpecifier(Path("gridValueType"), Some(ValueString(EndpointBuilders.bkrStatusType)))
-
   val pccSpecifier = IndexSpecifier(Path("bkrStatusRole"), Some(ValueString(EndpointBuilders.pccBkr)))
   val custSpecifier = IndexSpecifier(Path("bkrStatusRole"), Some(ValueString(EndpointBuilders.custBkr)))
 

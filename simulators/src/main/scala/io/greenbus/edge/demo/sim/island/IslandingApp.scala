@@ -20,16 +20,15 @@ package io.greenbus.edge.demo.sim.island
 
 import com.typesafe.scalalogging.LazyLogging
 import io.greenbus.edge.api._
-import io.greenbus.edge.demo.sim.{ BreakerMapping, ChpMapping, EssMapping, EssSim }
+import io.greenbus.edge.api.stream.ServiceClient
 import io.greenbus.edge.demo.sim.EssSim.GridForming
+import io.greenbus.edge.demo.sim.{ BreakerMapping, ChpMapping, EssMapping, EssSim }
 import io.greenbus.edge.flow
 import io.greenbus.edge.flow.Sender
-import io.greenbus.edge.peer.ConsumerServices
 import io.greenbus.edge.thread.CallMarshaller
 
-import scala.concurrent.{ Future, Promise }
-
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ Future, Promise }
 
 object ControlParams {
   import play.api.libs.json._
@@ -48,7 +47,7 @@ object SenderHelpers {
 
 }
 
-class IslandingApp(eventThread: CallMarshaller, publisher: IslandAppPublisher, subscriber: IslandAppSubscriber, services: ConsumerServices, params: ControlParams) extends LazyLogging {
+class IslandingApp(eventThread: CallMarshaller, publisher: IslandAppPublisher, subscriber: IslandAppSubscriber, services: ServiceClient, params: ControlParams) extends LazyLogging {
 
   private var enabled = false
   private var pccClosed = true
@@ -85,13 +84,13 @@ class IslandingApp(eventThread: CallMarshaller, publisher: IslandAppPublisher, s
   private def onTrip(): Unit = {
 
     val tripPath = EndpointPath(EndpointId(Path(Seq("Rankin", "MGRID", "CUST_BKR"))), BreakerMapping.bkrTrip)
-    val tripFut = SenderHelpers.request(services.queuingServiceClient, OutputRequest(tripPath, OutputParams()))
+    val tripFut = SenderHelpers.request(services, OutputRequest(tripPath, OutputParams()))
 
     val battEndPath = EndpointPath(EndpointId(Path(Seq("Rankin", "MGRID", "ESS"))), EssMapping.setBatteryMode)
-    val battFut = SenderHelpers.request(services.queuingServiceClient, OutputRequest(battEndPath, OutputParams(outputValueOpt = Some(ValueUInt32(GridForming.numeric)))))
+    val battFut = SenderHelpers.request(services, OutputRequest(battEndPath, OutputParams(outputValueOpt = Some(ValueUInt32(GridForming.numeric)))))
 
     val chpEndPath = EndpointPath(EndpointId(Path(Seq("Rankin", "MGRID", "CHP"))), ChpMapping.setTarget)
-    val chpFut = SenderHelpers.request(services.queuingServiceClient, OutputRequest(chpEndPath, OutputParams(outputValueOpt = Some(ValueDouble(params.chpRampedUp)))))
+    val chpFut = SenderHelpers.request(services, OutputRequest(chpEndPath, OutputParams(outputValueOpt = Some(ValueDouble(params.chpRampedUp)))))
 
     publisher.events.update(Path(Seq("application", "action")), ValueString("Executed actions on PCC trip"), System.currentTimeMillis())
     publisher.flush()
@@ -114,14 +113,14 @@ class IslandingApp(eventThread: CallMarshaller, publisher: IslandAppPublisher, s
   private def onClose(): Unit = {
 
     val closePath = EndpointPath(EndpointId(Path(Seq("Rankin", "MGRID", "CUST_BKR"))), BreakerMapping.bkrClose)
-    val closeFut = SenderHelpers.request(services.queuingServiceClient, OutputRequest(closePath, OutputParams()))
+    val closeFut = SenderHelpers.request(services, OutputRequest(closePath, OutputParams()))
 
     val battId = EndpointId(Path(Seq("Rankin", "MGRID", "ESS")))
-    val battFut = SenderHelpers.request(services.queuingServiceClient, OutputRequest(EndpointPath(battId, EssMapping.setBatteryMode), OutputParams(outputValueOpt = Some(ValueUInt32(EssSim.Constant.numeric)))))
-    val battSpFut = SenderHelpers.request(services.queuingServiceClient, OutputRequest(EndpointPath(battId, EssMapping.setChargeRate), OutputParams(outputValueOpt = Some(ValueDouble(params.chargingBatteryRate)))))
+    val battFut = SenderHelpers.request(services, OutputRequest(EndpointPath(battId, EssMapping.setBatteryMode), OutputParams(outputValueOpt = Some(ValueUInt32(EssSim.Constant.numeric)))))
+    val battSpFut = SenderHelpers.request(services, OutputRequest(EndpointPath(battId, EssMapping.setChargeRate), OutputParams(outputValueOpt = Some(ValueDouble(params.chargingBatteryRate)))))
 
     val chpEndPath = EndpointPath(EndpointId(Path(Seq("Rankin", "MGRID", "CHP"))), ChpMapping.setTarget)
-    val chpFut = SenderHelpers.request(services.queuingServiceClient, OutputRequest(chpEndPath, OutputParams(outputValueOpt = Some(ValueDouble(params.chpNominal)))))
+    val chpFut = SenderHelpers.request(services, OutputRequest(chpEndPath, OutputParams(outputValueOpt = Some(ValueDouble(params.chpNominal)))))
 
     publisher.events.update(Path(Seq("application", "action")), ValueString("Executed actions on PCC close"), System.currentTimeMillis())
     publisher.flush()
