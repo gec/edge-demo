@@ -767,7 +767,7 @@ var dataIndexSubscription = function(spec, dataHandler) {
           //console.log(msg);
           dataHandler(msg, pathList);
         });
-    }
+    };
 
     return sub;
 };
@@ -1068,10 +1068,10 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
     $scope.valueIsComplex = function(v) {
         return typeof v === 'object';
-    }
+    };
     $scope.valueIsLong = function(v, len) {
         return typeof v === 'string' && v.length > len
-    }
+    };
 
     $('#metadataModal').on('show.bs.modal', function (event) {
         console.log("saw modal event");
@@ -1098,80 +1098,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
     $scope.outputs = outputHelpers;
 
-    //var outputMap = {};
-
     var keySub = null;
-
-    /*var infoParams = {
-        descriptors: [ endpointIdForPath(namePath) ]
-    };
-    var infoSub = connectionService.subscribe(infoParams, function(msg) {
-        console.log("got info: ");
-        console.log(msg);
-
-        //$scope.dataKeySet = [];
-        //$scope.outputKeySet = [];
-        //var dataKeys = [];
-        //var outputKeys = [];
-
-
-        msg.updates
-            .filter(function(v) { return v.endpointUpdate != null })
-            .map(function(v) { return v.endpointUpdate })
-            .forEach(function(update) {
-
-            console.log(update);
-            var dataKs = [];
-            var outputKs = [];
-            var endId = update.id;
-            var descriptor = update.value;
-            if (descriptor != null && endId != null) {
-
-                $scope.endpointInfo = endpointInfo(endId, descriptor);
-
-                if (descriptor.dataKeySet != null) {
-                    descriptor.dataKeySet.forEach(function(elem) {
-                        console.log("ELEM:");
-                        console.log(elem);
-
-                        var endPath = { endpointId: endId, key: elem.key }
-                        dataKs.push(endPath)
-
-                        var pathStr = pathToString(elem.key);
-                        var db = null;
-                        var existing = dataMap[pathStr];
-                        if (existing != null && existing.value != null) {
-                            db = existing.value
-                        }
-                        var data = dataObject(name, elem.key, elem.value, db);
-                        $scope.dataMap[pathStr] = data;
-                    });
-                }
-                if (descriptor.outputKeySet != null) {
-                    descriptor.outputKeySet.forEach(function(elem) {
-                        console.log("OutELEM:");
-                        console.log(elem);
-
-                        var output = outputObject(endId, elem.key, elem.value);
-                        $scope.outputMap[pathToString(elem.key)] = output;
-
-                        var endPath = { endpointId: endId, key: elem.key }
-                        outputKs.push(endPath)
-                    });
-                }
-            }
-
-            //dataKeys = dataKs;
-            //outputKeys = outputKs;
-        });
-
-        // TODO: remove removed keys
-
-        updateDataTables();
-        updateKeySub(dataKeys, outputKeys);
-
-        $scope.$digest();
-    });*/
 
     var dataArrayToDataSubParams = function(data) {
 
@@ -1250,20 +1177,6 @@ angular.module('edgeGui', [ 'ngRoute' ])
                         dataObj.db.observe(update.value);
                     }
                 });
-
-                /*msg.updates.filter(function(v) { return v.dataKeyUpdate != null })
-                    .map(function(v) { return v.endpointUpdate })
-                    .forEach(function(update) {*/
-
-                /*msg.updates.forEach(function(elem) {
-                    var pathStr = pathToString(elem.key.key);
-                    //console.log("NOTIFICATION: ");
-                    //console.log(elem.value);
-                    var dataObj = $scope.dataMap[pathStr];
-                    if (dataObj != null) {
-                        dataObj.db.observe(elem.value);
-                    }
-                });*/
             };
 
             $scope.$digest();
@@ -1318,87 +1231,26 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
       $scope.outputs = outputHelpers;
 
-      var dataMap = {};
-
-      var keySub = null;
-
-      var infoParams = {
-          infoSubscription: [ endpointIdForPath(namePath) ]
-      }
-      var infoSub = connectionService.subscribe(infoParams, function(msg) {
-          console.log("got info: ");
-          console.log(msg);
-
-          var dataKeys = [];
-          var outputKeys = [];
-
-          msg.descriptorNotification.forEach(function(descNot) {
-              console.log(descNot)
-              //var dataKs = [];
-              //var outputKs = [];
-              var endId = descNot.endpointId
-              var descriptor = descNot.endpointDescriptor;
-              if (descriptor != null && endId != null) {
-
-                  $scope.endpointInfo = endpointInfo(endId, descriptor);
-
-                  if (descriptor.dataKeySet != null) {
-                      descriptor.dataKeySet.forEach(function(elem) {
-                          console.log("ELEM:");
-                          console.log(elem);
-
-                          var indexes = {};
-                          var metadata = {};
-
-                          if (elem.value.indexes != null) {
-                              elem.value.indexes.forEach(function(kv) {
-                                  indexes[pathToString(kv.key)] = sampleValueToSimpleValue(kv.value);
-                              });
-                          }
-                          if (elem.value.metadata != null) {
-                              elem.value.metadata.forEach(function(kv) {
-                                  console.log(elem.metadata);
-                                  metadata[pathToString(kv.key)] = valueToJsValue(kv.value);
-                              });
-                          }
-
-                          var endPath = { endpointId: endId, key: elem.key }
-                          //dataKs.push(endPath)
-
-                          var pathStr = pathToString(elem.key);
-                          var db = null;
-                          var existing = dataMap[pathStr];
-                          if (existing != null && existing.value != null) {
-                              db = existing.value
-                          }
-                          var data = dataObject(name, elem.key, elem.value, db);
-                          $scope.dataMap[pathStr] = data;
-                      });
-                  }
-                  if (descriptor.outputKeySet != null) {
-                      descriptor.outputKeySet.forEach(function(elem) {
-                          console.log(elem);
-
-                          var output = outputObject(endId, elem.key, elem.value);
-                          $scope.outputMap[pathToString(elem.key)] = output;
-
-                          var endPath = { endpointId: endId, key: elem.key }
-                          //outputKs.push(endPath)
-                      });
-                  }
-              }
-
-              //dataKeys = dataKs;
-              //outputKeys = outputKs;
+      var descSub = endpointDescriptorSubscription(endpointIdForPath(namePath), function(result) {
+          console.log("Got endpoint desc: " + namePath);
+          console.log(result);
+          result.data.forEach(function(elem) {
+              $scope.dataMap[elem.name] = elem;
           });
+          result.output.forEach(function(elem) {
+              console.log("adding output");
+              console.log(elem);
+              $scope.outputMap[elem.name] = elem;
+          });
+
+          $scope.endpointInfo = result.descriptor;
 
           $scope.$digest();
       });
 
-
       $scope.$on('$destroy', function() {
           console.log("endpoint destroyed: " + name)
-          infoSub.remove();
+          descSub.remove();
       });
 
     })
