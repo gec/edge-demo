@@ -80,11 +80,13 @@ class PeerSubMgr(events: CallMarshaller, subClient: EdgeSubscriptionClient, sock
       sub.updates.bind { not =>
         try {
 
+          //println(not)
           val b = ServerToClientMessage.newBuilder()
 
           val setBuilder = EdgeUpdateSet.newBuilder()
           not.map(ConsumerConversions.toProto).foreach(setBuilder.addUpdates)
           b.putSubscriptionNotification(key, setBuilder.build())
+          //println(setBuilder.build())
           val msg = b.build()
 
           val json = printer.print(msg)

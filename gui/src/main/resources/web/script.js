@@ -25,7 +25,7 @@ function valueToJsValue(v) {
         if (key === 'uuidValue') {
             return v[key]; // NOTE: for now, just take object
 
-        } else if (key === 'stringValue') {
+        } else if (key === 'textValue') {
             if (v[key]['mimeType'] != null) {
                 return {
                     text: v[key].value,
@@ -66,13 +66,13 @@ function sampleValueToSimpleValue(v) {
 }
 
 function endpointIdForPath(path) {
-    return { namedId: { name: path } };
+    return { name: path };
 }
 function endpointIdForName(name) {
-    return { namedId: { name: stringToPath(name) } };
+    return { name: stringToPath(name) };
 }
 function endpointIdToString(id) {
-    return pathToString(id.namedId.name);
+    return pathToString(id.name);
 }
 function endpointPathFromIdAndKey(endpointId, key) {
     return {
@@ -148,8 +148,10 @@ var connectionService = function(){
 
     function doConnect() {
 
-        var wsUri = connectParams.protocol === 'https' ? 'wss' : 'ws';
+        /*var wsUri = connectParams.protocol === 'https' ? 'wss' : 'ws';
         wsUri += '://' + connectParams.host + ':' + connectParams.port;
+        var ws = new WebSocket(wsUri + "/socket");*/
+        var wsUri = "ws://127.0.0.1:8080";
         var ws = new WebSocket(wsUri + "/socket");
         connectionIdle = false;
 
@@ -211,6 +213,8 @@ var connectionService = function(){
     }
 
     var doSubscription = function(key, params, callback) {
+        console.log("DOING: " + key);
+        console.log(params);
         var subs = {};
         subs[key] = params;
         var msg = { subscriptions_added : subs }
@@ -232,6 +236,16 @@ var connectionService = function(){
         correlationMap[correlation] = callback;
 
         var msg = {
+            outputRequests: [
+                {
+                    id: endPath,
+                    request: params,
+                    correlation: correlation
+                }
+            ]
+        };
+
+        /*var msg = {
             outputRequest: {
                 requests: [
                     {
@@ -241,7 +255,7 @@ var connectionService = function(){
                     }
                 ]
             }
-        };
+        };*/
         socket.send(JSON.stringify(msg))
     };
 
@@ -398,21 +412,6 @@ var eventDb = function(desc, indexes, metadata) {
 
     var current = [];
 
-    /*var handleSeqValue = function(v) {
-        console.log("handleValue: ");
-        console.log(v);
-
-        var jsValue = valueToJsValue(v);
-        console.log("JSVALUE:");
-        console.log(jsValue);
-
-        current = {
-            type: 'latestKeyValue',
-            value: v,
-            jsValue: jsValue
-        };
-    };*/
-
     var handleEvents = function(arr) {
         arr.forEach(handleEvent);
     };
@@ -420,7 +419,8 @@ var eventDb = function(desc, indexes, metadata) {
     var handleEvent = function(ev) {
         current.push({
             topicParts: ev.topic.part,
-            value: valueToJsValue(ev.value)
+            value: valueToJsValue(ev.value),
+            time: ev.time
         });
         if (current.length > 100) {
             current.shift();
@@ -435,27 +435,12 @@ var eventDb = function(desc, indexes, metadata) {
             console.log("EVENT notification: ");
             console.log(notification);
 
-            if (notification.update != null) {
-                var update = notification.update;
-                if (update.topicEventUpdate != null) {
-                    var events = state.topicEventUpdate.events;
-                    if (events != null) {
-                        events.forEach(handleEvent);
-                    }
-                }
-
-            } else if (notification.state != null) {
-                var state = notification.state;
-                if (state.topicEventState != null) {
-                    var events = state.topicEventState.events;
-                    if (events != null) {
-                        events.forEach(handleEvent);
-                    }
-                }
+            if (notification.topicEventUpdate != null) {
+                handleEvent(notification.topicEventUpdate);
             }
         }
     }
-}
+};
 
 var kvDb = function(kvDesc, indexes, metadata) {
 
@@ -484,27 +469,14 @@ var kvDb = function(kvDesc, indexes, metadata) {
             console.log("KVDB notification: ");
             console.log(notification);
 
-            if (notification.update != null) {
-                var update = notification.update;
-                if (update.sequencedValueUpdate != null) {
-                    var value = update.sequencedValueUpdate.value;
-                    if (value != null) {
-                        handleSeqValue(value);
-                    }
-                }
-
-            } else if (notification.state != null) {
-                var state = notification.state;
-                if (state.sequencedValueState != null) {
-                    var value = state.sequencedValueState.value;
-                    if (value != null) {
-                        handleSeqValue(value);
-                    }
+            if (notification.keyValueUpdate != null) {
+                if (notification.keyValueUpdate.value != null) {
+                    handleSeqValue(notification.keyValueUpdate.value);
                 }
             }
         }
     }
-}
+};
 
 var tsDb = function(tsDesc, indexes, metadata) {
 
@@ -552,12 +524,11 @@ var tsDb = function(tsDesc, indexes, metadata) {
 
     var handleTsSeq = function(tss) {
 
-        var rawValue = tss.sample.value
-        var v = sampleValueToSimpleValue(tss.sample.value);
-        var t = tss.sample.time;
+        var v = sampleValueToSimpleValue(tss.value);
+        var t = tss.time;
         var date = new Date(parseInt(t));
 
-        var typedValue = edgeSampleValueToJsSampleValue(tss.sample.value)
+        var typedValue = edgeSampleValueToJsSampleValue(tss.value);
         if (typedValue != null && typedValue.integer != null && integerMap != null && integerMap[typedValue.integer] != null) {
             typedValue = { string: integerMap[typedValue.integer] };
         }
@@ -572,37 +543,11 @@ var tsDb = function(tsDesc, indexes, metadata) {
         currentValue: function() {
             return current;
         },
-        observe: function(notification) {
-//            console.log("TSDB notification: ");
-//            console.log(notification);
-
-            if (notification.update != null) {
-                var update = notification.update;
-                if (update.timeSeriesUpdate != null) {
-                    var values = update.timeSeriesUpdate.values;
-                    if (values != null) {
-                        values.forEach(function (elem) {
-//                            console.log("state elem: ");
-//                            console.log(elem);
-                            handleTsSeq(elem);
-                        });
-                    }
-                }
-
-            } else if (notification.state != null) {
-                var state = notification.state;
-                if (state.timeSeriesState != null) {
-                    var values = state.timeSeriesState.values;
-                    if (values != null) {
-                        values.forEach(function (elem) {
-//                            console.log("update elem: ");
-//                            console.log(elem);
-                            handleTsSeq(elem);
-                        });
-                    }
-                }
+        observe: function(updateWrap) {
+            if (updateWrap.seriesUpdate != null) {
+                var update = updateWrap.seriesUpdate;
+                handleTsSeq(update);
             }
-
         }
     }
 };
@@ -648,8 +593,9 @@ var dataObject = function(endpointId, key, desc, dbParam) {
 
     return {
         endpointId: endpointId,
-        name : name,
         key: key,
+        endPath: endpointPathFromIdAndKey(endpointId, key),
+        name : name,
         type: type,
         indexes: indexes,
         metadata: metadata,
@@ -659,8 +605,12 @@ var dataObject = function(endpointId, key, desc, dbParam) {
 
 var outputObject = function(endpointId, key, desc) {
 
+    var name = pathToString(key);
     var indexes = null;
     var metadata = null;
+
+    console.log("OUTPUT DESC:");
+    console.log(desc);
 
     if (desc.indexes != null) {
         desc.indexes.forEach(function(kv) {
@@ -700,15 +650,85 @@ var outputObject = function(endpointId, key, desc) {
         }
     }
 
+    var endpointPath = endpointPathFromIdAndKey(endpointId, key);
+
     return {
         endpointId: endpointId,
         key: key,
-        endpointPathString: endPathToObjKey(endpointPathFromIdAndKey(endpointId, key)),
+        endPath: endpointPath,
+        endpointPathString: endPathToObjKey(endpointPath),
+        name: name,
         indexes: indexes,
         metadata: metadata,
         inputDef: inputDef
     };
-}
+};
+
+var endpointDescriptorSubscription = function(endId, handler) {
+
+    var dataMap = {};
+
+    var infoParams = {
+        descriptors: [ endId ]
+    };
+    console.log("Subscribing descriptor: " + endId);
+    console.log(infoParams);
+    var infoSub = connectionService.subscribe(infoParams, function(msg) {
+        console.log("endpointDescriptorSubscription got info: ");
+        console.log(msg);
+
+        var dataObjects = [];
+        var outputObjects = [];
+        var descResult = null;
+
+        msg.updates.filter(function(v) { return v.endpointUpdate != null })
+            .map(function(v) { return v.endpointUpdate })
+            .forEach(function(update) {
+                console.log(update);
+                var endId = update.id;
+                var descriptor = update.value;
+                if (descriptor != null && endId != null) {
+
+                    descResult = endpointInfo(endId, descriptor);
+
+                    if (descriptor.dataKeySet != null) {
+                        descriptor.dataKeySet.forEach(function(elem) {
+                            console.log("ELEM:");
+                            console.log(elem);
+
+                            var pathStr = pathToString(elem.key);
+                            var db = null;
+                            var existing = dataMap[pathStr];
+                            if (existing != null && existing.value != null) {
+                                db = existing.value
+                            }
+
+                            //var dataObject = function(endpointId, key, desc, dbParam)
+                            var data = dataObject(endId, elem.key, elem.value, db);
+                            dataObjects.push(data)
+                        });
+                    }
+                    if (descriptor.outputKeySet != null) {
+                        descriptor.outputKeySet.forEach(function(elem) {
+                            console.log("OutELEM:");
+                            console.log(elem);
+
+                            var output = outputObject(endId, elem.key, elem.value);
+                            outputObjects.push(output)
+                        });
+                    }
+                }
+            });
+
+        handler({
+            descriptor: descResult,
+            data: dataObjects,
+            output: outputObjects
+        });
+    });
+
+    return infoSub;
+};
 
 
 var dataIndexSubscription = function(spec, dataHandler) {
@@ -718,7 +738,7 @@ var dataIndexSubscription = function(spec, dataHandler) {
         }
     };
     var sub = connectionService.subscribe(subParams, function(msg) {
-        console.log("got sub: ");
+        console.log("dataIndexSubscription got sub: ");
         console.log(msg);
 
         if (msg.indexNotification != null && msg.indexNotification.dataKeyNotifications != null) {
@@ -908,7 +928,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
     }
 
 
-    var outputPowerSpec = {
+    /*var outputPowerSpec = {
         key: { part: [ 'gridValueType' ] },
         value: { stringValue: 'outputPower' }
     };
@@ -983,7 +1003,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
         console.log(msg);
         handleNotification(msg)
         updateOutputSet('setEssModeSet', pathList);
-    });
+    });*/
 
     $scope.$on('$destroy', function() {
         console.log("main destroyed: ");
@@ -1078,30 +1098,33 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
     $scope.outputs = outputHelpers;
 
-    var dataMap = {};
     //var outputMap = {};
 
     var keySub = null;
 
-    var infoParams = {
-        infoSubscription: [ endpointIdForPath(namePath) ]
-    }
+    /*var infoParams = {
+        descriptors: [ endpointIdForPath(namePath) ]
+    };
     var infoSub = connectionService.subscribe(infoParams, function(msg) {
         console.log("got info: ");
         console.log(msg);
 
         //$scope.dataKeySet = [];
         //$scope.outputKeySet = [];
-        var dataKeys = [];
-        var outputKeys = [];
+        //var dataKeys = [];
+        //var outputKeys = [];
 
 
-        msg.descriptorNotification.forEach(function(descNot) {
-            console.log(descNot)
+        msg.updates
+            .filter(function(v) { return v.endpointUpdate != null })
+            .map(function(v) { return v.endpointUpdate })
+            .forEach(function(update) {
+
+            console.log(update);
             var dataKs = [];
             var outputKs = [];
-            var endId = descNot.endpointId
-            var descriptor = descNot.endpointDescriptor;
+            var endId = update.id;
+            var descriptor = update.value;
             if (descriptor != null && endId != null) {
 
                 $scope.endpointInfo = endpointInfo(endId, descriptor);
@@ -1110,21 +1133,6 @@ angular.module('edgeGui', [ 'ngRoute' ])
                     descriptor.dataKeySet.forEach(function(elem) {
                         console.log("ELEM:");
                         console.log(elem);
-
-                        var indexes = {};
-                        var metadata = {};
-
-                        if (elem.value.indexes != null) {
-                            elem.value.indexes.forEach(function(kv) {
-                                indexes[pathToString(kv.key)] = sampleValueToSimpleValue(kv.value);
-                            });
-                        }
-                        if (elem.value.metadata != null) {
-                            elem.value.metadata.forEach(function(kv) {
-                                console.log(elem.metadata);
-                                metadata[pathToString(kv.key)] = valueToJsValue(kv.value);
-                            });
-                        }
 
                         var endPath = { endpointId: endId, key: elem.key }
                         dataKs.push(endPath)
@@ -1151,13 +1159,10 @@ angular.module('edgeGui', [ 'ngRoute' ])
                         outputKs.push(endPath)
                     });
                 }
-
-                //$scope.dataKeySet = descriptor.dataKeySet;
-                //$scope.outputKeySet = descriptor.outputKeySet;
             }
 
-            dataKeys = dataKs;
-            outputKeys = outputKs;
+            //dataKeys = dataKs;
+            //outputKeys = outputKs;
         });
 
         // TODO: remove removed keys
@@ -1166,25 +1171,91 @@ angular.module('edgeGui', [ 'ngRoute' ])
         updateKeySub(dataKeys, outputKeys);
 
         $scope.$digest();
+    });*/
+
+    var dataArrayToDataSubParams = function(data) {
+
+        var ts = [];
+        var kv = [];
+        var ev = [];
+
+        data.forEach(function(obj) {
+                if (obj.type === 'latestKeyValue') {
+                    kv.push(obj.endPath);
+                } else if (obj.type === 'timeSeriesValue') {
+                    ts.push(obj.endPath);
+                } else if (obj.type === 'eventTopicValue') {
+                    ev.push(obj.endPath);
+                }
+        });
+
+        return {
+            series: ts,
+            key_values: kv,
+            topic_events: ev
+        };
+    };
+
+    var descSub = endpointDescriptorSubscription(endpointIdForPath(namePath), function(result) {
+        console.log("Got endpoint desc: " + namePath);
+        console.log(result);
+        result.data.forEach(function(elem) {
+            $scope.dataMap[elem.name] = elem;
+        });
+        result.output.forEach(function(elem) {
+            console.log("adding output");
+            console.log(elem);
+            $scope.outputMap[elem.name] = elem;
+        });
+
+        $scope.endpointInfo = result.descriptor;
+
+        updateDataTables();
+
+        var dataParams = dataArrayToDataSubParams(result.data);
+        var outputKeys = result.output.map(function(out) { return out.endPath });
+
+        updateKeySub(dataParams, outputKeys);
+
+        $scope.$digest();
     });
 
-    var updateKeySub = function(dataKeys, outputKeys) {
+    var updateKeySub = function(dataParams, outputKeys) {
         if (keySub != null) {
             keySub.remove();
         }
 
         var keyParams = {
-            dataSubscription: dataKeys,
-            outputSubscription: outputKeys
+            data_params: dataParams,
+            output_keys: outputKeys
         };
         console.log(keyParams);
         keySub = connectionService.subscribe(keyParams, function(msg) {
-            //console.log("got data: ");
-            //console.log(msg);
+            /*console.log("got data: ");
+            console.log(msg);*/
 
-            var dataNotification = msg.dataNotification;
-            if (dataNotification != null) {
-                dataNotification.forEach(function(elem) {
+            if (msg.updates != null) {
+
+                var dataKeyUpdates = msg.updates.reduce(function(acc, elem) {
+                    if (elem.dataKeyUpdate != null) acc.push(elem.dataKeyUpdate)
+                    return acc;
+                }, []);
+
+                dataKeyUpdates.forEach(function(update) {
+                    var pathStr = pathToString(update.id.key);
+                    var dataObj = $scope.dataMap[pathStr];
+                    if (dataObj != null) {
+                        //console.log(dataObj);
+                        //console.log(update.value);
+                        dataObj.db.observe(update.value);
+                    }
+                });
+
+                /*msg.updates.filter(function(v) { return v.dataKeyUpdate != null })
+                    .map(function(v) { return v.endpointUpdate })
+                    .forEach(function(update) {*/
+
+                /*msg.updates.forEach(function(elem) {
                     var pathStr = pathToString(elem.key.key);
                     //console.log("NOTIFICATION: ");
                     //console.log(elem.value);
@@ -1192,8 +1263,8 @@ angular.module('edgeGui', [ 'ngRoute' ])
                     if (dataObj != null) {
                         dataObj.db.observe(elem.value);
                     }
-                });
-            }
+                });*/
+            };
 
             $scope.$digest();
         });
@@ -1201,8 +1272,8 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
 
     $scope.$on('$destroy', function() {
-        console.log("endpoint destroyed: " + name)
-        infoSub.remove();
+        console.log("endpoint destroyed: " + name);
+        descSub.remove();
         if (keySub != null) {
             keySub.remove();
         }
@@ -1263,8 +1334,8 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
           msg.descriptorNotification.forEach(function(descNot) {
               console.log(descNot)
-              var dataKs = [];
-              var outputKs = [];
+              //var dataKs = [];
+              //var outputKs = [];
               var endId = descNot.endpointId
               var descriptor = descNot.endpointDescriptor;
               if (descriptor != null && endId != null) {
@@ -1292,7 +1363,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
                           }
 
                           var endPath = { endpointId: endId, key: elem.key }
-                          dataKs.push(endPath)
+                          //dataKs.push(endPath)
 
                           var pathStr = pathToString(elem.key);
                           var db = null;
@@ -1312,13 +1383,13 @@ angular.module('edgeGui', [ 'ngRoute' ])
                           $scope.outputMap[pathToString(elem.key)] = output;
 
                           var endPath = { endpointId: endId, key: elem.key }
-                          outputKs.push(endPath)
+                          //outputKs.push(endPath)
                       });
                   }
               }
 
-              dataKeys = dataKs;
-              outputKeys = outputKs;
+              //dataKeys = dataKs;
+              //outputKeys = outputKs;
           });
 
           $scope.$digest();
@@ -1345,23 +1416,25 @@ angular.module('edgeGui', [ 'ngRoute' ])
     });
 
     var params = {
-               endpoint_set_prefix: [{
-                 "part": []
-               }]
-             };
+        index_params: {
+            endpoint_prefixes: [{
+                "part": []
+            }]
+        }
+    };
 
     var sub = connectionService.subscribe(params, function(msg) {
         console.log("Got subscription notification: ");
         console.log(msg);
 
-        if (msg.endpointSetNotification != null) {
-            for (var i in msg.endpointSetNotification) {
-                var notification = msg.endpointSetNotification[i];
-                console.log(notification);
-                if (notification.snapshot != null) {
-                    onSetSnapshot(notification.snapshot);
-                } else {
-
+        if (msg.updates != null) {
+            for (var i in msg.updates) {
+                var update = msg.updates[i];
+                console.log(update);
+                if (update.endpointPrefixUpdate != null) {
+                    if (update.endpointPrefixUpdate.value != null) {
+                        onSetSnapshot(update.endpointPrefixUpdate.value.value);
+                    }
                 }
             }
         }
@@ -1369,20 +1442,18 @@ angular.module('edgeGui', [ 'ngRoute' ])
         $scope.$digest();
     });
 
-    var onSetSnapshot = function(snap) {
+    var onSetSnapshot = function(set) {
         console.log("on set snapshot");
-        console.log(snap);
-        var arr = []
-        if (snap.entries != null) {
+        console.log(set);
+        var arr = [];
            //$scope.manifest = snap.entries;
-           snap.entries.forEach(function(elem) {
-                arr.push({
-                    simpleName: endpointIdToString(elem.endpointId),
-                    nameParts: elem.endpointId.namedId.name.part,
-                    endpointId: elem.endpointId
-                })
-           });
-        }
+        set.forEach(function(elem) {
+            arr.push({
+                simpleName: endpointIdToString(elem),
+                nameParts: elem.name.part,
+                endpointId: elem
+            })
+       });
 
         $scope.manifest = arr;
     }
