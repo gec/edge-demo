@@ -148,10 +148,9 @@ var connectionService = function(){
 
     function doConnect() {
 
-        /*var wsUri = connectParams.protocol === 'https' ? 'wss' : 'ws';
+        var wsUri = connectParams.protocol === 'https' ? 'wss' : 'ws';
         wsUri += '://' + connectParams.host + ':' + connectParams.port;
-        var ws = new WebSocket(wsUri + "/socket");*/
-        var wsUri = "ws://127.0.0.1:8080";
+        /*var wsUri = "ws://127.0.0.1:8080";*/
         var ws = new WebSocket(wsUri + "/socket");
         connectionIdle = false;
 
@@ -417,10 +416,12 @@ var eventDb = function(desc, indexes, metadata) {
     };
 
     var handleEvent = function(ev) {
+        var date = new Date(parseInt(ev.time));
         current.push({
             topicParts: ev.topic.part,
             value: valueToJsValue(ev.value),
-            time: ev.time
+            time: ev.time,
+            date: date
         });
         if (current.length > 100) {
             current.shift();

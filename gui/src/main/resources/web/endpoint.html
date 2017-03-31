@@ -236,6 +236,7 @@
                         <tr>
                             <th>Topic</th>
                             <th style="text-align: right">Value</th>
+                            <th style="text-align: right">Time</th>
                         </tr>
                         <tbody>
                         <tr ng-repeat="event in data.db.currentValue() | orderBy:'+':true">
@@ -248,6 +249,7 @@
                                 </em>
                             </td>
                             <td style="text-align: right"><strong>{{event.value}}</strong></td>
+                            <td style="text-align: right">{{event.date | date:'HH:mm:ss.sss yyyy-MM-dd'}}</td>
                         </tr>
                         </tbody>
                     </table>

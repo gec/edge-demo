@@ -72,33 +72,24 @@ class PeerSubMgr(events: CallMarshaller, subClient: EdgeSubscriptionClient, sock
   private var subsMap = Map.empty[Long, EdgeSubscription]
 
   private def doSubscription(key: Long, params: SubscriptionParams): Unit = {
-
     val sub = subClient.subscribe(params)
+    subsMap += (key -> sub)
+    sub.updates.bind { not =>
+      try {
+        val b = ServerToClientMessage.newBuilder()
 
-    if (paramsMap.get(key).contains(params)) {
-      subsMap += (key -> sub)
-      sub.updates.bind { not =>
-        try {
+        val setBuilder = EdgeUpdateSet.newBuilder()
+        not.map(ConsumerConversions.toProto).foreach(setBuilder.addUpdates)
+        b.putSubscriptionNotification(key, setBuilder.build())
+        //println(setBuilder.build())
+        val msg = b.build()
 
-          //println(not)
-          val b = ServerToClientMessage.newBuilder()
-
-          val setBuilder = EdgeUpdateSet.newBuilder()
-          not.map(ConsumerConversions.toProto).foreach(setBuilder.addUpdates)
-          b.putSubscriptionNotification(key, setBuilder.build())
-          //println(setBuilder.build())
-          val msg = b.build()
-
-          val json = printer.print(msg)
-          socket.send(json)
-        } catch {
-          case ex: Throwable =>
-            logger.error("Problem writing proto message: " + ex)
-        }
+        val json = printer.print(msg)
+        socket.send(json)
+      } catch {
+        case ex: Throwable =>
+          logger.error("Problem writing proto message: " + ex)
       }
-
-    } else {
-      sub.close()
     }
   }
 
@@ -191,7 +182,7 @@ class PeerLink(socket: Socket, services: ConsumerServices) extends Actor with Ca
       try {
         parser.merge(text, b)
         val proto = b.build()
-        println(proto)
+        //println(proto)
 
         proto.getSubscriptionsRemovedList.foreach(k => subMgr.remove(k))
 
