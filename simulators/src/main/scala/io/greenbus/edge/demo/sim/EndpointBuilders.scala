@@ -19,8 +19,7 @@
 package io.greenbus.edge.demo.sim
 
 import io.greenbus.edge.api._
-import io.greenbus.edge.api.stream.{ EndpointBuilder, KeyMetadata, OutputStatusHandle }
-import io.greenbus.edge.colset.gateway.{ AppendEventSink, EventSink }
+import io.greenbus.edge.api.stream.{ EndpointBuilder, KeyMetadata }
 import play.api.libs.json.Json
 
 object EndpointBuilders {
