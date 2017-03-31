@@ -148,9 +148,9 @@ var connectionService = function(){
 
     function doConnect() {
 
-        var wsUri = connectParams.protocol === 'https' ? 'wss' : 'ws';
-        wsUri += '://' + connectParams.host + ':' + connectParams.port;
-        /*var wsUri = "ws://127.0.0.1:8080";*/
+        // var wsUri = connectParams.protocol === 'https' ? 'wss' : 'ws';
+        // wsUri += '://' + connectParams.host + ':' + connectParams.port;
+        var wsUri = "ws://127.0.0.1:8080";
         var ws = new WebSocket(wsUri + "/socket");
         connectionIdle = false;
 
@@ -738,11 +738,27 @@ var dataIndexSubscription = function(spec, dataHandler) {
             data_key_indexes: [ spec ]
         }
     };
+    console.log("subscribing to: ");
+    console.log(subParams);
     var sub = connectionService.subscribe(subParams, function(msg) {
         console.log("dataIndexSubscription got sub: ");
         console.log(msg);
 
-        if (msg.indexNotification != null && msg.indexNotification.dataKeyNotifications != null) {
+        if (msg.updates != null) {
+            msg.updates.filter(function(v) { return v.dataKeyIndexUpdate != null })
+                .map(function(v) { return v.dataKeyIndexUpdate })
+                .forEach(function(update) {
+                    console.log("GOT UPDATE:");
+                    console.log(update);
+                    if (update.value != null && update.value.value != null) {
+                        onSetUpdate(update.value.value);
+                    }
+                });
+        }
+
+
+
+        /*if (msg.indexNotification != null && msg.indexNotification.dataKeyNotifications != null) {
             var not = msg.indexNotification.dataKeyNotifications
             not.forEach(function(elem) {
                 if (elem.snapshot != null && elem.snapshot.endpointPaths != null) {
@@ -750,7 +766,7 @@ var dataIndexSubscription = function(spec, dataHandler) {
                     onSetUpdate(pathSet);
                 }
             });
-        }
+        }*/
 
     });
 
@@ -758,14 +774,16 @@ var dataIndexSubscription = function(spec, dataHandler) {
         console.log("pathList:");
         console.log(pathList);
         var keyParams = {
-          dataSubscription: pathList
+          dataParams: {
+              series: pathList
+          }
         };
         console.log("keyParams:");
         console.log(keyParams);
 
         keySub = connectionService.subscribe(keyParams, function(msg) {
-          //console.log("got data for: " + spec);
-          //console.log(msg);
+          console.log("got data for: " + spec);
+          console.log(msg);
           dataHandler(msg, pathList);
         });
     };
@@ -862,6 +880,38 @@ angular.module('edgeGui', [ 'ngRoute' ])
     }
 
     var handleNotification = function(msg) {
+        console.log("HANDLE NOTIFICATION: ");
+        console.log(msg);
+
+
+        if (msg.updates != null) {
+
+            var dataKeyUpdates = msg.updates.reduce(function(acc, elem) {
+                if (elem.dataKeyUpdate != null) acc.push(elem.dataKeyUpdate)
+                return acc;
+            }, []);
+
+            dataKeyUpdates.forEach(function(update) {
+                //var pathStr = pathToString(update.id);
+
+                var endPath = update.id;
+
+                if (update.value.descriptorUpdate != null) {
+                    console.log("SAW DESCRIPTOR:");
+                    console.log(update.value.descriptorUpdate);
+                    handleDataKeyNotification(update.id, update.value.descriptorUpdate);
+                }
+
+                var dataMapKey = endPathToObjKey(endPath);
+                var dataObj = $scope.dataMap[dataMapKey];
+                if (dataObj != null) {
+                    //console.log("NOTIFICATION: ");
+                    //console.log(elem);
+                    dataObj.db.observe(update.value);
+                }
+            });
+        }
+        /*
         var dataNotification = msg.dataNotification;
         if (dataNotification != null) {
             dataNotification.forEach(function(elem) {
@@ -899,7 +949,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
                 }
             });
         }
-
+*/
         $scope.$digest();
     };
 
@@ -914,9 +964,11 @@ angular.module('edgeGui', [ 'ngRoute' ])
             db = existing.value
         }
         var data = dataObject(endPath.endpointId, endPath.key, keyDescriptor, db);
+        console.log("BUILT: ");
+        console.log(data);
 
         $scope.dataMap[dataMapKey] = data;
-    }
+    };
 
 
     var handleOutputKeyNotification = function(endPath, keyDescriptor) {
@@ -926,20 +978,23 @@ angular.module('edgeGui', [ 'ngRoute' ])
 
         var output = outputObject(endPath.endpointId, endPath.key, keyDescriptor);
         $scope.outputMap[dataMapKey] = output;
-    }
+    };
 
 
-    /*var outputPowerSpec = {
+    var outputPowerSpec = {
         key: { part: [ 'gridValueType' ] },
         value: { stringValue: 'outputPower' }
     };
 
     var outputPowerSub = dataIndexSubscription(outputPowerSpec, function (msg, pathList) {
-        handleNotification(msg)
+        console.log("!!!!!!")
+        console.log(msg);
+        console.log(pathList);
+        handleNotification(msg);
         updateDataSet('outputPowerSet', pathList);
     });
 
-    var breakerStatus = {
+    /*var breakerStatus = {
         key: { part: [ 'gridValueType' ] },
         value: { stringValue: 'breakerStatus' }
     };
