@@ -18,8 +18,10 @@
  */
 package io.greenbus.edge.demo.sim
 
+import java.util.UUID
+
 import io.greenbus.edge.api._
-import io.greenbus.edge.api.stream.{ EndpointBuilder, KeyMetadata }
+import io.greenbus.edge.api.stream.{EndpointBuilder, KeyMetadata}
 import play.api.libs.json.Json
 
 object EndpointBuilders {
@@ -69,6 +71,10 @@ object EndpointBuilders {
     val bkrClose = builder.outputStatus(BreakerMapping.bkrClose, KeyMetadata(Map(Path("gridOutputType") -> ValueString(s"${gridType}Switch")), Map(Path("simpleInputType") -> ValueString("indication"))))
     val bkrCloseReceiver = builder.registerOutput(BreakerMapping.bkrClose)
 
+    private val uuid = UUID.randomUUID()
+    bkrTrip.update(OutputKeyStatus(uuid, 0, None))
+    bkrClose.update(OutputKeyStatus(uuid, 0, None))
+
     val buffer = builder.build(20, 20)
   }
 
@@ -99,13 +105,18 @@ object EndpointBuilders {
     val powerTarget = builder.seriesValue(ChpMapping.powerTarget, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputTargetType)), metadata = Map(Path("unit") -> ValueString("kW"))))
     val faultStatus = builder.seriesValue(ChpMapping.faultStatus, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(faultType)), metadata = Map(faultMappingKv)))
 
-    val setTarget = builder.outputStatus(ChpMapping.setTarget, KeyMetadata(Map(Path("gridValueType") -> ValueString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double"))))
+    val setTarget = builder.outputStatus(ChpMapping.setTarget, KeyMetadata(Map(Path("gridOutputType") -> ValueString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double"))))
     val setTargetReceiver = builder.registerOutput(ChpMapping.setTarget)
 
     val faultEnable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
     val faultEnableReceiver = builder.registerOutput(ChpMapping.faultEnable)
     val faultDisable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
     val faultDisableReceiver = builder.registerOutput(ChpMapping.faultDisable)
+
+    private val uuid = UUID.randomUUID()
+    setTarget.update(OutputKeyStatus(uuid, 0, None))
+    faultEnable.update(OutputKeyStatus(uuid, 0, None))
+    faultDisable.update(OutputKeyStatus(uuid, 0, None))
 
     val buffer = builder.build(20, 20)
   }
@@ -138,7 +149,7 @@ object EndpointBuilders {
     val events = builder.topicEventValue(EssMapping.events)
 
     val percentSoc = builder.seriesValue(EssMapping.percentSoc, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString("percentSoc")), metadata = Map(Path("unit") -> ValueString("%"))))
-    val mode = builder.seriesValue(EssMapping.mode, KeyMetadata(metadata = Map(EssPublisher.modeMapKv)))
+    val mode = builder.seriesValue(EssMapping.mode, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString("essMode")), metadata = Map(EssPublisher.modeMapKv)))
     val socMax = builder.seriesValue(EssMapping.socMax, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString("socMax")), metadata = Map(Path("unit") -> ValueString("%"))))
     val socMin = builder.seriesValue(EssMapping.socMin, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString("socMin")), metadata = Map(Path("unit") -> ValueString("%"))))
     val chargeDischargeRate = builder.seriesValue(EssMapping.chargeDischargeRate, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputPowerType)), metadata = Map(Path("unit") -> ValueString("kW"))))
@@ -149,15 +160,21 @@ object EndpointBuilders {
     val chargeRateTarget = builder.seriesValue(EssMapping.chargeRateTarget, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputTargetType)), metadata = Map(Path("unit") -> ValueString("kW"))))
     val faultStatus = builder.seriesValue(ChpMapping.faultStatus, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(faultType)), metadata = Map(faultMappingKv)))
 
-    val batteryMode = builder.outputStatus(EssMapping.setBatteryMode, KeyMetadata(Map(Path("gridValueType") -> ValueString("setEssMode")), setModeMetadata))
+    val batteryMode = builder.outputStatus(EssMapping.setBatteryMode, KeyMetadata(Map(Path("gridOutputType") -> ValueString("setEssMode")), setModeMetadata))
     val batteryModeReceiver = builder.registerOutput(EssMapping.setBatteryMode)
-    val setChargeRate = builder.outputStatus(EssMapping.setChargeRate, KeyMetadata(Map(Path("gridValueType") -> ValueString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double"))))
+    val setChargeRate = builder.outputStatus(EssMapping.setChargeRate, KeyMetadata(Map(Path("gridOutputType") -> ValueString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double"))))
     val setChargeRateReceiver = builder.registerOutput(EssMapping.setChargeRate)
 
     val faultEnable = builder.outputStatus(EssMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
     val faultEnableReceiver = builder.registerOutput(EssMapping.faultEnable)
     val faultDisable = builder.outputStatus(EssMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
     val faultDisableReceiver = builder.registerOutput(EssMapping.faultDisable)
+
+    private val uuid = UUID.randomUUID()
+    batteryMode.update(OutputKeyStatus(uuid, 0, None))
+    setChargeRate.update(OutputKeyStatus(uuid, 0, None))
+    faultEnable.update(OutputKeyStatus(uuid, 0, None))
+    faultDisable.update(OutputKeyStatus(uuid, 0, None))
 
     val buffer = builder.build(20, 20)
   }
@@ -178,6 +195,10 @@ object EndpointBuilders {
     val faultEnableReceiver = builder.registerOutput(PvMapping.faultEnable)
     val faultDisable = builder.outputStatus(PvMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
     val faultDisableReceiver = builder.registerOutput(PvMapping.faultDisable)
+
+    private val uuid = UUID.randomUUID()
+    faultEnable.update(OutputKeyStatus(uuid, 0, None))
+    faultDisable.update(OutputKeyStatus(uuid, 0, None))
 
     val buffer = builder.build(20, 20)
   }

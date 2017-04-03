@@ -53,6 +53,7 @@ class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord, ctx: Simulator
     pvs = Seq(pv1),
     loads = Seq(load1))
 
+  // TODO: need to run tick() when a device changes
   def tick(): Unit = {
     val now = System.currentTimeMillis()
     val lineState = simulator.tick(now)

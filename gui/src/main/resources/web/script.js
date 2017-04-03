@@ -131,12 +131,12 @@ var connectionService = function(){
         var next = seq;
         seq += 1;
         return next;
-    }
+    };
     var nextOutputSeq = function() {
         var next = outputSeq;
         outputSeq += 1;
         return next;
-    }
+    };
 
     //doConnect();
 
@@ -801,14 +801,16 @@ var outputIndexSubscription = function(spec, dataHandler) {
         console.log("GOT OUTPUT SUB: ");
         console.log(msg);
 
-        if (msg.indexNotification != null && msg.indexNotification.outputKeyNotifications != null) {
-            var not = msg.indexNotification.outputKeyNotifications
-            not.forEach(function(elem) {
-                if (elem.snapshot != null && elem.snapshot.endpointPaths != null) {
-                    var pathSet = elem.snapshot.endpointPaths
-                    onSetUpdate(pathSet);
-                }
-            });
+        if (msg.updates != null) {
+            msg.updates.filter(function(v) { return v.outputKeyIndexUpdate != null })
+                .map(function(v) { return v.outputKeyIndexUpdate })
+                .forEach(function(update) {
+                    console.log("GOT UPDATE:");
+                    console.log(update);
+                    if (update.value != null && update.value.value != null) {
+                        onSetUpdate(update.value.value);
+                    }
+                });
         }
 
     });
@@ -817,7 +819,7 @@ var outputIndexSubscription = function(spec, dataHandler) {
         console.log("pathList:");
         console.log(pathList);
         var keyParams = {
-          outputSubscription: pathList
+          outputKeys: pathList
         };
         console.log("keyParams:");
         console.log(keyParams);
@@ -827,7 +829,7 @@ var outputIndexSubscription = function(spec, dataHandler) {
           console.log(msg);
           dataHandler(msg, pathList);
         });
-    }
+    };
 
     return sub;
 };
@@ -863,7 +865,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
         if (set.length > 0) {
             $scope[name] = set;
         }
-    }
+    };
 
     var updateOutputSet = function(name, pathList) {
         var set = [];
@@ -877,7 +879,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
         if (set.length > 0) {
             $scope[name] = set;
         }
-    }
+    };
 
     var handleNotification = function(msg) {
         console.log("HANDLE NOTIFICATION: ");
@@ -908,6 +910,30 @@ angular.module('edgeGui', [ 'ngRoute' ])
                     //console.log("NOTIFICATION: ");
                     //console.log(elem);
                     dataObj.db.observe(update.value);
+                }
+            });
+
+            var outputKeyUpdates = msg.updates.reduce(function(acc, elem) {
+                if (elem.outputKeyUpdate != null) acc.push(elem.outputKeyUpdate)
+                return acc;
+            }, []);
+            outputKeyUpdates.forEach(function(update) {
+                //var pathStr = pathToString(update.id);
+
+                var endPath = update.id;
+
+                if (update.value.descriptorUpdate != null) {
+                    console.log("SAW DESCRIPTOR:");
+                    console.log(update.value.descriptorUpdate);
+                    handleOutputKeyNotification(update.id, update.value.descriptorUpdate);
+                }
+
+                var outputMapKey = endPathToObjKey(endPath);
+                var outputObj = $scope.outputMap[outputMapKey];
+                if (outputObj != null && update.statusUpdate) {
+                    console.log("OUT OBJ NOTIFICATION: ");
+                    console.log(elem);
+                    outputObj.db.observe(update.statusUpdate);
                 }
             });
         }
@@ -994,7 +1020,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
         updateDataSet('outputPowerSet', pathList);
     });
 
-    /*var breakerStatus = {
+    var breakerStatus = {
         key: { part: [ 'gridValueType' ] },
         value: { stringValue: 'breakerStatus' }
     };
@@ -1030,7 +1056,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
     };
 
     var breakerOutputSub = outputIndexSubscription(breakerOutputSpec, function (msg, pathList) {
-        console.log("saw notification: ");
+        console.log("saw OUTPUT notification: ");
         console.log(msg);
         handleNotification(msg)
         updateOutputSet('breakerOutputSet', pathList);
@@ -1044,10 +1070,9 @@ angular.module('edgeGui', [ 'ngRoute' ])
     var outputTargetSub = outputIndexSubscription(outputTargetSpec, function (msg, pathList) {
         console.log("saw notification: ");
         console.log(msg);
-        handleNotification(msg)
+        handleNotification(msg);
         updateOutputSet('outputTargetSet', pathList);
     });
-
 
     var outputEssModeSpec = {
         key: { part: [ 'gridOutputType' ] },
@@ -1059,7 +1084,7 @@ angular.module('edgeGui', [ 'ngRoute' ])
         console.log(msg);
         handleNotification(msg)
         updateOutputSet('setEssModeSet', pathList);
-    });*/
+    });
 
     $scope.$on('$destroy', function() {
         console.log("main destroyed: ");
