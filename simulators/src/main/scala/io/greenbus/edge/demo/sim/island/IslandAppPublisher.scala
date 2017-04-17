@@ -20,6 +20,8 @@ package io.greenbus.edge.demo.sim.island
 
 import io.greenbus.edge.api._
 import io.greenbus.edge.api.stream.{ EndpointBuilder, KeyMetadata }
+import io.greenbus.edge.data.{ ValueBool, ValueList, ValueString }
+import io.greenbus.edge.demo.sim.EndpointBuilders
 
 object IslandAppPublisher {
   val eventsKey = Path("Events")
@@ -31,11 +33,11 @@ object IslandAppPublisher {
 
   val boolMappingKey = Path("boolMapping")
 
-  val enabledMapping = ValueArray(Vector(
-    ValueObject(Map(
+  val enabledMapping = ValueList(Vector(
+    EndpointBuilders.toVMap(Map(
       "value" -> ValueBool(false),
       "name" -> ValueString("Disabled"))),
-    ValueObject(Map(
+    EndpointBuilders.toVMap(Map(
       "value" -> ValueBool(true),
       "name" -> ValueString("Enabled")))))
 

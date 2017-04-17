@@ -20,7 +20,7 @@ package io.greenbus.edge.demo.sim
 
 import java.util.Calendar
 
-import io.greenbus.edge.api.{ NumericConvertible, Value }
+import io.greenbus.edge.data.{ NumericConvertible, Value }
 
 object Utils {
 

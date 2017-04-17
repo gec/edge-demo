@@ -19,6 +19,7 @@
 package io.greenbus.edge.demo.sim
 
 import io.greenbus.edge.api._
+import io.greenbus.edge.data.{ ValueBool, ValueDouble, ValueString, ValueUInt64 }
 import io.greenbus.edge.demo.sim.EndpointBuilders.EssPublisher
 import io.greenbus.edge.flow
 import play.api.libs.json.Json
@@ -132,7 +133,8 @@ class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState
 
   def currentState: EssState = state
 
-  publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
+  //publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
+  publisher.params.update(EndpointBuilders.jsonKeyValue(Json.toJson(params).toString()))
 
   def updates(line: LineState, time: Long): Unit = {
     publisher.percentSoc.update(ValueDouble(EssSim.calcSoc(params, state)), time)

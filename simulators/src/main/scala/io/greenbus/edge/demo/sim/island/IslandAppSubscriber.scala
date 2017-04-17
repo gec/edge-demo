@@ -21,6 +21,7 @@ package io.greenbus.edge.demo.sim.island
 import com.typesafe.scalalogging.LazyLogging
 import io.greenbus.edge.api._
 import io.greenbus.edge.api.stream._
+import io.greenbus.edge.data.ValueString
 import io.greenbus.edge.demo.sim.EndpointBuilders
 import io.greenbus.edge.flow.{ QueuedDistributor, Source }
 

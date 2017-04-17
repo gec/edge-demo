@@ -24,7 +24,7 @@ import com.typesafe.scalalogging.LazyLogging
 import io.greenbus.edge.api._
 import io.greenbus.edge.api.consumer.proto.convert.ConsumerConversions
 import io.greenbus.edge.api.consumer.proto.{ ClientOutputRequest, ClientToServerMessage, EdgeUpdateSet, ServerToClientMessage }
-import io.greenbus.edge.api.proto.convert.{ OutputConversions, ValueConversions }
+import io.greenbus.edge.api.proto.convert.{ Conversions, OutputConversions }
 import io.greenbus.edge.peer.ConsumerServices
 import io.greenbus.edge.thread.CallMarshaller
 
@@ -137,7 +137,7 @@ class PeerOutputMgr(events: CallMarshaller, serviceClient: ServiceClient, socket
     if (request.hasId && request.hasRequest) {
 
       val reqOpt = for {
-        id <- ValueConversions.fromProto(request.getId)
+        id <- Conversions.fromProto(request.getId)
         params <- OutputConversions.fromProto(request.getRequest)
       } yield {
         (id, params)

@@ -21,10 +21,21 @@ package io.greenbus.edge.demo.sim
 import java.util.UUID
 
 import io.greenbus.edge.api._
-import io.greenbus.edge.api.stream.{EndpointBuilder, KeyMetadata}
+import io.greenbus.edge.api.stream.{ EndpointBuilder, KeyMetadata }
+import io.greenbus.edge.data._
 import play.api.libs.json.Json
 
 object EndpointBuilders {
+
+  def jsonKeyValue(json: String): Value = {
+    ValueString(json)
+  }
+
+  def toVMap(map: Map[String, Value]): ValueMap = {
+    ValueMap(map.map {
+      case (k, v) => (ValueString(k), v)
+    })
+  }
 
   val pccBkr = "pccBkr"
   val custBkr = "custBkr"
@@ -36,20 +47,20 @@ object EndpointBuilders {
 
   val boolMappingKey = Path("boolMapping")
 
-  val faultMapping = ValueArray(Vector(
-    ValueObject(Map(
+  val faultMapping = ValueList(Vector(
+    toVMap(Map(
       "value" -> ValueBool(false),
       "name" -> ValueString("Clear"))),
-    ValueObject(Map(
+    toVMap(Map(
       "value" -> ValueBool(true),
       "name" -> ValueString("Fault")))))
   val faultMappingKv = boolMappingKey -> faultMapping
 
-  val breakerStatusMapping = ValueArray(Vector(
-    ValueObject(Map(
+  val breakerStatusMapping = ValueList(Vector(
+    toVMap(Map(
       "value" -> ValueBool(false),
       "name" -> ValueString("Open"))),
-    ValueObject(Map(
+    toVMap(Map(
       "value" -> ValueBool(true),
       "name" -> ValueString("Closed")))))
   val breakerStatusMappingKv = boolMappingKey -> breakerStatusMapping
@@ -123,14 +134,14 @@ object EndpointBuilders {
 
   object EssPublisher {
 
-    val modeMapping = ValueArray(Vector(
-      ValueObject(Map(
+    val modeMapping = ValueList(Vector(
+      toVMap(Map(
         "index" -> ValueUInt32(0),
         "name" -> ValueString("Constant"))),
-      ValueObject(Map(
+      toVMap(Map(
         "index" -> ValueUInt32(1),
         "name" -> ValueString("Smoothing"))),
-      ValueObject(Map(
+      toVMap(Map(
         "index" -> ValueUInt32(2),
         "name" -> ValueString("GridForming")))))
 

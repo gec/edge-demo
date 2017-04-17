@@ -20,6 +20,7 @@ package io.greenbus.edge.demo.sim
 
 import io.greenbus.edge._
 import io.greenbus.edge.api._
+import io.greenbus.edge.data.{ ValueBool, ValueDouble, ValueString }
 import io.greenbus.edge.demo.sim.EndpointBuilders.BreakerPublisher
 
 object BreakerMapping {

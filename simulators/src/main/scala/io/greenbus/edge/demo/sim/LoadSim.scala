@@ -18,7 +18,8 @@
  */
 package io.greenbus.edge.demo.sim
 
-import io.greenbus.edge.api.{ Path, Value, ValueBool, ValueDouble }
+import io.greenbus.edge.api.Path
+import io.greenbus.edge.data.ValueDouble
 import io.greenbus.edge.demo.sim.EndpointBuilders.LoadPublisher
 
 object LoadParams {

@@ -19,6 +19,7 @@
 package io.greenbus.edge.demo.sim
 
 import io.greenbus.edge.api._
+import io.greenbus.edge.data.{ ValueBool, ValueDouble, ValueString }
 import io.greenbus.edge.demo.sim.EndpointBuilders.PvPublisher
 import io.greenbus.edge.flow
 import play.api.libs.json.Json
@@ -84,7 +85,8 @@ class PvSim(params: PvParams, initialState: PvState, publisher: PvPublisher) ext
 
   def currentState: PvState = state
 
-  publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
+  //publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
+  publisher.params.update(EndpointBuilders.jsonKeyValue(Json.toJson(params).toString()))
 
   def updates(line: LineState, time: Long): Unit = {
     publisher.pvOutputPower.update(ValueDouble(atTime(time)), time)

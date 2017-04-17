@@ -19,6 +19,7 @@
 package io.greenbus.edge.demo.sim
 
 import io.greenbus.edge.api._
+import io.greenbus.edge.data.{ NumericConvertible, ValueBool, ValueDouble, ValueString }
 import io.greenbus.edge.demo.sim.EndpointBuilders.ChpPublisher
 import io.greenbus.edge.flow
 import play.api.libs.json.Json
@@ -76,7 +77,8 @@ class ChpSim(params: ChpParams, initialState: ChpState, publisher: ChpPublisher)
 
   def currentState: ChpState = state
 
-  publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
+  //publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
+  publisher.params.update(EndpointBuilders.jsonKeyValue(Json.toJson(params).toString()))
 
   def updates(line: LineState, time: Long): Unit = {
     publisher.power.update(ValueDouble(state.currentValue), time)

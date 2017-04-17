@@ -19,6 +19,7 @@
 package io.greenbus.edge.demo.sim
 
 import io.greenbus.edge.api._
+import io.greenbus.edge.data.{ SampleValue, Value }
 
 sealed trait SimUpdate
 case class TimeSeriesUpdate(path: Path, v: SampleValue) extends SimUpdate
