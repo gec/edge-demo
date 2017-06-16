@@ -22,6 +22,7 @@ import java.util.UUID
 
 import io.greenbus.edge.api._
 import io.greenbus.edge.data._
+import io.greenbus.edge.edm.core.EdgeCoreModel
 import play.api.libs.json.Json
 
 object EndpointBuilders {
@@ -30,10 +31,42 @@ object EndpointBuilders {
     ValueString(json)
   }
 
-  def toVMap(map: Map[String, Value]): ValueMap = {
-    ValueMap(map.map {
-      case (k, v) => (ValueString(k), v)
-    })
+  def analogStatusMetadata(unit: String, decimalPoints: Int, other: (Path, Value)*): Map[Path, Value] = {
+    Map(
+      EdgeCoreModel.seriesType(EdgeCoreModel.SeriesType.AnalogStatus),
+      EdgeCoreModel.unitMetadata(unit),
+      EdgeCoreModel.analogDecimalPoints(decimalPoints)) ++
+      other
+  }
+
+  def labeledBool(truth: String, falsity: String, other: (Path, Value)*): Map[Path, Value] = {
+    Map(
+      EdgeCoreModel.seriesType(EdgeCoreModel.SeriesType.BooleanStatus),
+      EdgeCoreModel.labeledBooleanMetadata(truth, falsity)) ++
+      other
+  }
+
+  def labeledInteger(labels: Map[Long, String], other: (Path, Value)*): Map[Path, Value] = {
+    Map(
+      EdgeCoreModel.seriesType(EdgeCoreModel.SeriesType.IntegerEnum),
+      EdgeCoreModel.labeledIntegerMetadata(labels)) ++
+      other
+  }
+
+  def indicationOutput(other: (Path, Value)*): Map[Path, Value] = {
+    Map(
+      EdgeCoreModel.outputType(EdgeCoreModel.OutputType.SimpleIndication)) ++ other
+  }
+
+  def doubleSetpointOutput(other: (Path, Value)*): Map[Path, Value] = {
+    Map(
+      EdgeCoreModel.outputType(EdgeCoreModel.OutputType.AnalogSetpoint)) ++ other
+  }
+
+  def labeledEnumOutput(labels: Map[Long, String], other: (Path, Value)*): Map[Path, Value] = {
+    Map(
+      EdgeCoreModel.outputType(EdgeCoreModel.OutputType.EnumerationSetpoint),
+      EdgeCoreModel.requestIntegerLabels(labels)) ++ other
   }
 
   val pccBkr = "pccBkr"
@@ -44,41 +77,25 @@ object EndpointBuilders {
   val outputTargetType = "outputTarget"
   val bkrStatusType = "breakerStatus"
 
-  val boolMappingKey = Path("boolMapping")
+  val faultMappingKv = EdgeCoreModel.labeledBooleanMetadata("Fault", "Clear")
 
-  val faultMapping = ValueList(Vector(
-    toVMap(Map(
-      "value" -> ValueBool(false),
-      "name" -> ValueString("Clear"))),
-    toVMap(Map(
-      "value" -> ValueBool(true),
-      "name" -> ValueString("Fault")))))
-  val faultMappingKv = boolMappingKey -> faultMapping
-
-  val breakerStatusMapping = ValueList(Vector(
-    toVMap(Map(
-      "value" -> ValueBool(false),
-      "name" -> ValueString("Open"))),
-    toVMap(Map(
-      "value" -> ValueBool(true),
-      "name" -> ValueString("Closed")))))
-  val breakerStatusMappingKv = boolMappingKey -> breakerStatusMapping
+  val breakerStatusMappingKv = EdgeCoreModel.labeledBooleanMetadata("Closed", "Open")
 
   class BreakerPublisher(pcc: Boolean, builder: EndpointBuilder) {
 
     private val gridType = if (pcc) pccBkr else custBkr
-    builder.setIndexes(Map(Path("gridDeviceType") -> ValueString(gridType)))
+    builder.setMetadata(Map(Path("gridDeviceType") -> ValueString(gridType)))
 
     val events = builder.topicEventValue(BreakerMapping.events)
 
-    val bkrPower = builder.seriesValue(BreakerMapping.bkrPower, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputPowerType)), metadata = Map(Path("unit") -> ValueString("kW"))))
-    val bkrVoltage = builder.seriesValue(BreakerMapping.bkrVoltage, KeyMetadata(metadata = Map(Path("unit") -> ValueString("kV"))))
-    val bkrCurrent = builder.seriesValue(BreakerMapping.bkrCurrent, KeyMetadata(metadata = Map(Path("unit") -> ValueString("A"))))
-    val bkrStatus = builder.seriesValue(BreakerMapping.bkrStatus, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(bkrStatusType), Path("bkrStatusRole") -> ValueString(gridType)), metadata = Map(breakerStatusMappingKv)))
+    val bkrPower = builder.seriesValue(BreakerMapping.bkrPower, KeyMetadata(metadata = analogStatusMetadata("kW", 2, Path("gridValueType") -> ValueString(outputPowerType))))
+    val bkrVoltage = builder.seriesValue(BreakerMapping.bkrVoltage, KeyMetadata(metadata = analogStatusMetadata("kV", 2)))
+    val bkrCurrent = builder.seriesValue(BreakerMapping.bkrCurrent, KeyMetadata(metadata = analogStatusMetadata("A", 2)))
+    val bkrStatus = builder.seriesValue(BreakerMapping.bkrStatus, KeyMetadata(metadata = labeledBool("Closed", "Open", Path("gridValueType") -> ValueString(bkrStatusType), Path("bkrStatusRole") -> ValueString(gridType))))
 
-    val bkrTrip = builder.outputStatus(BreakerMapping.bkrTrip, KeyMetadata(Map(Path("gridOutputType") -> ValueString(s"${gridType}Switch")), Map(Path("simpleInputType") -> ValueString("indication"))))
+    val bkrTrip = builder.outputStatus(BreakerMapping.bkrTrip, KeyMetadata(metadata = indicationOutput(Path("gridOutputType") -> ValueString(s"${gridType}Switch"))))
     val bkrTripReceiver = builder.registerOutput(BreakerMapping.bkrTrip)
-    val bkrClose = builder.outputStatus(BreakerMapping.bkrClose, KeyMetadata(Map(Path("gridOutputType") -> ValueString(s"${gridType}Switch")), Map(Path("simpleInputType") -> ValueString("indication"))))
+    val bkrClose = builder.outputStatus(BreakerMapping.bkrClose, KeyMetadata(metadata = indicationOutput(Path("gridOutputType") -> ValueString(s"${gridType}Switch"))))
     val bkrCloseReceiver = builder.registerOutput(BreakerMapping.bkrClose)
 
     private val uuid = UUID.randomUUID()
@@ -90,37 +107,37 @@ object EndpointBuilders {
 
   class LoadPublisher(builder: EndpointBuilder) {
 
-    builder.setIndexes(Map(Path("gridDeviceType") -> ValueString("gen")))
+    builder.setMetadata(Map(Path("gridDeviceType") -> ValueString("gen")))
 
     val params = builder.latestKeyValue(LoadMapping.params)
 
-    val power = builder.seriesValue(LoadMapping.power, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputPowerType)), metadata = Map(Path("unit") -> ValueString("kW"))))
-    val voltage = builder.seriesValue(LoadMapping.voltage, KeyMetadata(metadata = Map(Path("unit") -> ValueString("kV"))))
-    val current = builder.seriesValue(LoadMapping.current, KeyMetadata(metadata = Map(Path("unit") -> ValueString("A"))))
-    val kvar = builder.seriesValue(LoadMapping.kvar, KeyMetadata(metadata = Map(Path("unit") -> ValueString("kVAR"))))
+    val power = builder.seriesValue(LoadMapping.power, KeyMetadata(metadata = analogStatusMetadata("kW", 2, Path("gridValueType") -> ValueString(outputPowerType))))
+    val voltage = builder.seriesValue(LoadMapping.voltage, KeyMetadata(metadata = analogStatusMetadata("kV", 2)))
+    val current = builder.seriesValue(LoadMapping.current, KeyMetadata(metadata = analogStatusMetadata("A", 2)))
+    val kvar = builder.seriesValue(LoadMapping.kvar, KeyMetadata(metadata = analogStatusMetadata("kVAR", 2)))
 
     val buffer = builder.build()
   }
 
   class ChpPublisher(builder: EndpointBuilder) {
 
-    builder.setIndexes(Map(Path("gridDeviceType") -> ValueString("gen")))
+    builder.setMetadata(Map(Path("gridDeviceType") -> ValueString("gen")))
 
     val params = builder.latestKeyValue(ChpMapping.params)
 
     val events = builder.topicEventValue(ChpMapping.events)
 
-    val power = builder.seriesValue(ChpMapping.power, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputPowerType)), metadata = Map(Path("unit") -> ValueString("kW"))))
-    val powerCapacity = builder.seriesValue(ChpMapping.powerCapacity, KeyMetadata(metadata = Map(Path("unit") -> ValueString("kW"))))
-    val powerTarget = builder.seriesValue(ChpMapping.powerTarget, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputTargetType)), metadata = Map(Path("unit") -> ValueString("kW"))))
-    val faultStatus = builder.seriesValue(ChpMapping.faultStatus, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(faultType)), metadata = Map(faultMappingKv)))
+    val power = builder.seriesValue(ChpMapping.power, KeyMetadata(metadata = analogStatusMetadata("kW", 2, Path("gridValueType") -> ValueString(outputPowerType))))
+    val powerCapacity = builder.seriesValue(ChpMapping.powerCapacity, KeyMetadata(metadata = analogStatusMetadata("kW", 2)))
+    val powerTarget = builder.seriesValue(ChpMapping.powerTarget, KeyMetadata(metadata = analogStatusMetadata("kW", 2, Path("gridValueType") -> ValueString(outputTargetType))))
+    val faultStatus = builder.seriesValue(ChpMapping.faultStatus, KeyMetadata(metadata = labeledBool("Fault", "Clear", Path("gridValueType") -> ValueString(faultType))))
 
-    val setTarget = builder.outputStatus(ChpMapping.setTarget, KeyMetadata(Map(Path("gridOutputType") -> ValueString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double"))))
+    val setTarget = builder.outputStatus(ChpMapping.setTarget, KeyMetadata(metadata = doubleSetpointOutput(Path("gridOutputType") -> ValueString("setOutputTarget"))))
     val setTargetReceiver = builder.registerOutput(ChpMapping.setTarget)
 
-    val faultEnable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
+    val faultEnable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
     val faultEnableReceiver = builder.registerOutput(ChpMapping.faultEnable)
-    val faultDisable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
+    val faultDisable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
     val faultDisableReceiver = builder.registerOutput(ChpMapping.faultDisable)
 
     private val uuid = UUID.randomUUID()
@@ -133,51 +150,37 @@ object EndpointBuilders {
 
   object EssPublisher {
 
-    val modeMapping = ValueList(Vector(
-      toVMap(Map(
-        "index" -> ValueUInt32(0),
-        "name" -> ValueString("Constant"))),
-      toVMap(Map(
-        "index" -> ValueUInt32(1),
-        "name" -> ValueString("Smoothing"))),
-      toVMap(Map(
-        "index" -> ValueUInt32(2),
-        "name" -> ValueString("GridForming")))))
-
-    val modeMapKv = Path("integerMapping") -> modeMapping
-
-    val setModeMetadata = Map(Path("simpleInputType") -> ValueString("integer"), modeMapKv)
-
+    val modeMapping = Map(0L -> "Constant", 1L -> "Smoothing", 2L -> "GridForming")
   }
   class EssPublisher(builder: EndpointBuilder) {
     import EssPublisher._
 
-    builder.setIndexes(Map(Path("gridDeviceType") -> ValueString("ess")))
+    builder.setMetadata(Map(Path("gridDeviceType") -> ValueString("ess")))
 
     val params = builder.latestKeyValue(EssMapping.params)
 
     val events = builder.topicEventValue(EssMapping.events)
 
-    val percentSoc = builder.seriesValue(EssMapping.percentSoc, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString("percentSoc")), metadata = Map(Path("unit") -> ValueString("%"))))
-    val mode = builder.seriesValue(EssMapping.mode, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString("essMode")), metadata = Map(EssPublisher.modeMapKv)))
-    val socMax = builder.seriesValue(EssMapping.socMax, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString("socMax")), metadata = Map(Path("unit") -> ValueString("%"))))
-    val socMin = builder.seriesValue(EssMapping.socMin, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString("socMin")), metadata = Map(Path("unit") -> ValueString("%"))))
-    val chargeDischargeRate = builder.seriesValue(EssMapping.chargeDischargeRate, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputPowerType)), metadata = Map(Path("unit") -> ValueString("kW"))))
-    val chargeRateMax = builder.seriesValue(EssMapping.chargeRateMax, KeyMetadata(metadata = Map(Path("unit") -> ValueString("kW"))))
-    val dischargeRateMax = builder.seriesValue(EssMapping.dischargeRateMax, KeyMetadata(metadata = Map(Path("unit") -> ValueString("kW"))))
-    val capacity = builder.seriesValue(EssMapping.capacity, KeyMetadata(metadata = Map(Path("unit") -> ValueString("kWh"))))
-    val efficiency = builder.seriesValue(EssMapping.efficiency)
-    val chargeRateTarget = builder.seriesValue(EssMapping.chargeRateTarget, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputTargetType)), metadata = Map(Path("unit") -> ValueString("kW"))))
-    val faultStatus = builder.seriesValue(ChpMapping.faultStatus, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(faultType)), metadata = Map(faultMappingKv)))
+    val percentSoc = builder.seriesValue(EssMapping.percentSoc, KeyMetadata(metadata = analogStatusMetadata("%", 2, Path("gridValueType") -> ValueString("percentSoc"))))
+    val mode = builder.seriesValue(EssMapping.mode, KeyMetadata(metadata = labeledInteger(modeMapping, Path("gridValueType") -> ValueString("essMode"))))
+    val socMax = builder.seriesValue(EssMapping.socMax, KeyMetadata(metadata = analogStatusMetadata("%", 2, Path("gridValueType") -> ValueString("socMax"))))
+    val socMin = builder.seriesValue(EssMapping.socMin, KeyMetadata(metadata = analogStatusMetadata("%", 2, Path("gridValueType") -> ValueString("socMin"))))
+    val chargeDischargeRate = builder.seriesValue(EssMapping.chargeDischargeRate, KeyMetadata(metadata = analogStatusMetadata("kW", 2, Path("gridValueType") -> ValueString(outputPowerType))))
+    val chargeRateMax = builder.seriesValue(EssMapping.chargeRateMax, KeyMetadata(metadata = analogStatusMetadata("kW", 2)))
+    val dischargeRateMax = builder.seriesValue(EssMapping.dischargeRateMax, KeyMetadata(metadata = analogStatusMetadata("kW", 2)))
+    val capacity = builder.seriesValue(EssMapping.capacity, KeyMetadata(metadata = analogStatusMetadata("kWh", 2)))
+    val efficiency = builder.seriesValue(EssMapping.efficiency, KeyMetadata(metadata = analogStatusMetadata("", 2)))
+    val chargeRateTarget = builder.seriesValue(EssMapping.chargeRateTarget, KeyMetadata(metadata = analogStatusMetadata("kW", 2, Path("gridValueType") -> ValueString(outputTargetType))))
+    val faultStatus = builder.seriesValue(ChpMapping.faultStatus, KeyMetadata(metadata = labeledBool("Fault", "Clear", Path("gridValueType") -> ValueString(faultType))))
 
-    val batteryMode = builder.outputStatus(EssMapping.setBatteryMode, KeyMetadata(Map(Path("gridOutputType") -> ValueString("setEssMode")), setModeMetadata))
+    val batteryMode = builder.outputStatus(EssMapping.setBatteryMode, KeyMetadata(metadata = labeledEnumOutput(modeMapping, Path("gridOutputType") -> ValueString("setEssMode"))))
     val batteryModeReceiver = builder.registerOutput(EssMapping.setBatteryMode)
-    val setChargeRate = builder.outputStatus(EssMapping.setChargeRate, KeyMetadata(Map(Path("gridOutputType") -> ValueString("setOutputTarget")), Map(Path("simpleInputType") -> ValueString("double"))))
+    val setChargeRate = builder.outputStatus(EssMapping.setChargeRate, KeyMetadata(metadata = doubleSetpointOutput(Path("gridOutputType") -> ValueString("setOutputTarget"))))
     val setChargeRateReceiver = builder.registerOutput(EssMapping.setChargeRate)
 
-    val faultEnable = builder.outputStatus(EssMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
+    val faultEnable = builder.outputStatus(EssMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
     val faultEnableReceiver = builder.registerOutput(EssMapping.faultEnable)
-    val faultDisable = builder.outputStatus(EssMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
+    val faultDisable = builder.outputStatus(EssMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
     val faultDisableReceiver = builder.registerOutput(EssMapping.faultDisable)
 
     private val uuid = UUID.randomUUID()
@@ -191,19 +194,19 @@ object EndpointBuilders {
 
   class PvPublisher(builder: EndpointBuilder) {
 
-    builder.setIndexes(Map(Path("gridDeviceType") -> ValueString("gen")))
+    builder.setMetadata(Map(Path("gridDeviceType") -> ValueString("gen")))
 
     val params = builder.latestKeyValue(PvMapping.params)
 
     val events = builder.topicEventValue(PvMapping.events)
 
-    val pvOutputPower = builder.seriesValue(PvMapping.pvOutputPower, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(outputPowerType)), metadata = Map(Path("unit") -> ValueString("kW"))))
-    val pvCapacity = builder.seriesValue(PvMapping.pvCapacity, KeyMetadata(metadata = Map(Path("unit") -> ValueString("kW"))))
-    val faultStatus = builder.seriesValue(PvMapping.faultStatus, KeyMetadata(indexes = Map(Path("gridValueType") -> ValueString(faultType)), metadata = Map(faultMappingKv)))
+    val pvOutputPower = builder.seriesValue(PvMapping.pvOutputPower, KeyMetadata(metadata = analogStatusMetadata("kW", 2, Path("gridValueType") -> ValueString(outputPowerType))))
+    val pvCapacity = builder.seriesValue(PvMapping.pvCapacity, KeyMetadata(metadata = analogStatusMetadata("kW", 2)))
+    val faultStatus = builder.seriesValue(PvMapping.faultStatus, KeyMetadata(metadata = labeledBool("Fault", "Clear", Path("gridValueType") -> ValueString(faultType))))
 
-    val faultEnable = builder.outputStatus(PvMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
+    val faultEnable = builder.outputStatus(PvMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
     val faultEnableReceiver = builder.registerOutput(PvMapping.faultEnable)
-    val faultDisable = builder.outputStatus(PvMapping.faultEnable, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
+    val faultDisable = builder.outputStatus(PvMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
     val faultDisableReceiver = builder.registerOutput(PvMapping.faultDisable)
 
     private val uuid = UUID.randomUUID()

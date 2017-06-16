@@ -35,7 +35,7 @@ object EdgeSimulators {
     val system = ActorSystem("brokerTest", akkaConfig)
 
     val ctx = SimulatorContext(
-      equipmentPrefix = Seq("Rankin", "MGRID"))
+      equipmentPrefix = Seq("Durham", "MGRID"))
 
     import system.dispatcher
 
