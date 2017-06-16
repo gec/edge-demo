@@ -21,7 +21,6 @@ package io.greenbus.edge.demo.sim
 import java.util.UUID
 
 import io.greenbus.edge.api._
-import io.greenbus.edge.api.stream.{ EndpointBuilder, KeyMetadata }
 import io.greenbus.edge.data._
 import play.api.libs.json.Json
 
@@ -86,7 +85,7 @@ object EndpointBuilders {
     bkrTrip.update(OutputKeyStatus(uuid, 0, None))
     bkrClose.update(OutputKeyStatus(uuid, 0, None))
 
-    val buffer = builder.build(20, 20)
+    val buffer = builder.build()
   }
 
   class LoadPublisher(builder: EndpointBuilder) {
@@ -100,7 +99,7 @@ object EndpointBuilders {
     val current = builder.seriesValue(LoadMapping.current, KeyMetadata(metadata = Map(Path("unit") -> ValueString("A"))))
     val kvar = builder.seriesValue(LoadMapping.kvar, KeyMetadata(metadata = Map(Path("unit") -> ValueString("kVAR"))))
 
-    val buffer = builder.build(20, 20)
+    val buffer = builder.build()
   }
 
   class ChpPublisher(builder: EndpointBuilder) {
@@ -129,7 +128,7 @@ object EndpointBuilders {
     faultEnable.update(OutputKeyStatus(uuid, 0, None))
     faultDisable.update(OutputKeyStatus(uuid, 0, None))
 
-    val buffer = builder.build(20, 20)
+    val buffer = builder.build()
   }
 
   object EssPublisher {
@@ -187,7 +186,7 @@ object EndpointBuilders {
     faultEnable.update(OutputKeyStatus(uuid, 0, None))
     faultDisable.update(OutputKeyStatus(uuid, 0, None))
 
-    val buffer = builder.build(20, 20)
+    val buffer = builder.build()
   }
 
   class PvPublisher(builder: EndpointBuilder) {
@@ -211,7 +210,7 @@ object EndpointBuilders {
     faultEnable.update(OutputKeyStatus(uuid, 0, None))
     faultDisable.update(OutputKeyStatus(uuid, 0, None))
 
-    val buffer = builder.build(20, 20)
+    val buffer = builder.build()
   }
 
 }

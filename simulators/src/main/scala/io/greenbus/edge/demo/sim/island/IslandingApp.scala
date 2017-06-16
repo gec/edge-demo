@@ -29,6 +29,7 @@ import io.greenbus.edge.thread.CallMarshaller
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ Future, Promise }
+/*
 
 object ControlParams {
   import play.api.libs.json._
@@ -157,3 +158,4 @@ class IslandingApp(eventThread: CallMarshaller, publisher: IslandAppPublisher, s
   }
 
 }
+*/

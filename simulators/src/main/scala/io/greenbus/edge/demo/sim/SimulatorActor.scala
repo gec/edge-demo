@@ -22,7 +22,7 @@ import java.util.UUID
 
 import akka.actor.{ Actor, Props }
 import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge.peer.ProducerServices
+import io.greenbus.edge.api.ProducerService
 import io.greenbus.edge.thread.CallMarshaller
 
 import scala.concurrent.duration._
@@ -31,12 +31,12 @@ object SimulatorActor {
 
   case object Tick
 
-  def props(ctx: SimulatorContext, service: ProducerServices): Props = {
+  def props(ctx: SimulatorContext, service: ProducerService): Props = {
     Props(classOf[SimulatorActor], ctx, service)
   }
 
 }
-class SimulatorActor(ctx: SimulatorContext, service: ProducerServices) extends Actor with CallMarshalActor with LazyLogging {
+class SimulatorActor(ctx: SimulatorContext, service: ProducerService) extends Actor with CallMarshalActor with LazyLogging {
   import SimulatorActor._
 
   private val mgr = new SimulatorMgr(marshaller, LoadParser.fromFile("data/olney-2014-load-hourly.tsv"), ctx, service)

@@ -19,10 +19,10 @@
 package io.greenbus.edge.demo.sim.island
 
 import io.greenbus.edge.api._
-import io.greenbus.edge.api.stream.{ EndpointBuilder, KeyMetadata }
 import io.greenbus.edge.data.{ ValueBool, ValueList, ValueString }
 import io.greenbus.edge.demo.sim.EndpointBuilders
 
+/*
 object IslandAppPublisher {
   val eventsKey = Path("Events")
   val paramsKey = Path("Params")
@@ -57,6 +57,7 @@ class IslandAppPublisher(builder: EndpointBuilder, seriesBufferSize: Int, events
   val setDisable = builder.outputStatus(setDisableKey, KeyMetadata(Map(), Map(Path("simpleInputType") -> ValueString("indication"))))
   val setDisableRcv = builder.registerOutput(setDisableKey)
 
-  private val handle = builder.build(seriesBufferSize, eventsBufferSize)
+  private val handle = builder.build()
   def flush(): Unit = handle.flush()
 }
+*/

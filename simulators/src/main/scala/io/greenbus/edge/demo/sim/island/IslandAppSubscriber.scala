@@ -25,6 +25,7 @@ import io.greenbus.edge.data.ValueString
 import io.greenbus.edge.demo.sim.EndpointBuilders
 import io.greenbus.edge.flow.{ QueuedDistributor, Source }
 
+/*
 object IslandAppSubscriber {
 
   val pccSpecifier = IndexSpecifier(Path("bkrStatusRole"), Some(ValueString(EndpointBuilders.pccBkr)))
@@ -182,4 +183,4 @@ class IslandAppSubscriber(client: EdgeSubscriptionClient) extends LazyLogging {
   }
 
 }
-
+*/

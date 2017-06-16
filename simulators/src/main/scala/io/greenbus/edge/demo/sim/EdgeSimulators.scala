@@ -20,7 +20,7 @@ package io.greenbus.edge.demo.sim
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import io.greenbus.edge.peer.AmqpEdgeService
+import io.greenbus.edge.peer.AmqpEdgeConnectionManager
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -39,9 +39,9 @@ object EdgeSimulators {
 
     import system.dispatcher
 
-    val services = AmqpEdgeService.build("127.0.0.1", 50001, 10000)
+    val services = AmqpEdgeConnectionManager.build("127.0.0.1", 55672, 10000)
     services.start()
-    val producerServices = services.producer
+    val producerServices = services.bindProducerServices()
 
     val sim = system.actorOf(SimulatorActor.props(ctx, producerServices))
 

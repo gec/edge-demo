@@ -19,25 +19,30 @@
 package io.greenbus.edge.demo.sim.island
 
 import io.greenbus.edge.api.{ EndpointId, Path }
-import io.greenbus.edge.peer.AmqpEdgeService
+import io.greenbus.edge.peer.AmqpEdgeConnectionManager
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+/*
 object IslandingEntry {
 
   def main(args: Array[String]): Unit = {
 
-    val services = AmqpEdgeService.build("127.0.0.1", 50001, 10000)
+    val services = AmqpEdgeConnectionManager.build("127.0.0.1", 50001, 10000)
     services.start()
-    val producerServices = services.producer
+    val producerServices = services.bindProducerServices()
 
     val params = ControlParams("Rankin", 250.0, 187.0, 50.0)
 
     val builder = producerServices.endpointBuilder(EndpointId(Path(Seq("Rankin", "App", "Islanding"))))
 
     val publisher = new IslandAppPublisher(builder, 30, 30)
-    val subscriber = new IslandAppSubscriber(services.consumer.subscriptionClient)
 
-    val app = new IslandingApp(services.eventThread, publisher, subscriber, services.consumer.queuingServiceClient, params)
+    val consumer = services.bindConsumerServices()
+
+    val subscriber = new IslandAppSubscriber(consumer.subscriptionClient)
+
+    val app = new IslandingApp(services.eventThread, publisher, subscriber, consumer.queuingServiceClient, params)
   }
 }
+*/

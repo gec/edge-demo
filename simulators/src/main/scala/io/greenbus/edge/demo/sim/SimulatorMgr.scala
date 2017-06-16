@@ -19,12 +19,11 @@
 package io.greenbus.edge.demo.sim
 
 import com.typesafe.scalalogging.LazyLogging
-import io.greenbus.edge.api.{ EndpointId, Path }
+import io.greenbus.edge.api.{ EndpointId, Path, ProducerService }
 import io.greenbus.edge.demo.sim.EndpointBuilders._
-import io.greenbus.edge.peer.ProducerServices
 import io.greenbus.edge.thread.CallMarshaller
 
-class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord, ctx: SimulatorContext, service: ProducerServices) extends LazyLogging {
+class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord, ctx: SimulatorContext, service: ProducerService) extends LazyLogging {
 
   private val pvParams = PvParams.basic
   private val pv1 = new PvSim(pvParams, PvSim.PvState(1.0, fault = false), new PvPublisher(service.endpointBuilder(EndpointId(Path(ctx.equipmentPrefix :+ "PV")))))
