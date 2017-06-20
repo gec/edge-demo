@@ -34,12 +34,15 @@ object EdgeSimulators {
     val akkaConfig = slf4jConfig.withFallback(rootConfig)
     val system = ActorSystem("brokerTest", akkaConfig)
 
+    val host = Option(System.getProperty("host")).getOrElse("127.0.0.1")
+    val port = Option(System.getProperty("port")).map(Integer.parseInt).getOrElse(55672)
+
     val ctx = SimulatorContext(
       equipmentPrefix = Seq("Durham", "MGRID"))
 
     import system.dispatcher
 
-    val services = AmqpEdgeConnectionManager.build("127.0.0.1", 55672, 10000)
+    val services = AmqpEdgeConnectionManager.build(host, port, 10000)
     services.start()
     val producerServices = services.bindProducerServices()
 
