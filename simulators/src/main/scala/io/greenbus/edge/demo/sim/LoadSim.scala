@@ -21,6 +21,7 @@ package io.greenbus.edge.demo.sim
 import io.greenbus.edge.api.Path
 import io.greenbus.edge.data.ValueDouble
 import io.greenbus.edge.demo.sim.EndpointBuilders.LoadPublisher
+import play.api.libs.json.Json
 
 object LoadParams {
   import play.api.libs.json._
@@ -62,6 +63,8 @@ class LoadSim(params: LoadParams, data: LoadRecord, initialState: LoadState, pub
   private val stageReduction3 = params.stageReduction1.getOrElse(0.85)
 
   private var state = initialState
+
+  publisher.params.update(EndpointBuilders.jsonKeyValue(Json.toJson(params).toString()))
 
   def updateReductionStage(stage: Int): Unit = {
     state = state.copy(reductionStage = stage)
