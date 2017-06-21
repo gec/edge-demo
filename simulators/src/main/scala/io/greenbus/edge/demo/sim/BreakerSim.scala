@@ -18,6 +18,9 @@
  */
 package io.greenbus.edge.demo.sim
 
+import java.util.UUID
+import java.util.concurrent.atomic.{ AtomicInteger, AtomicLong }
+
 import io.greenbus.edge._
 import io.greenbus.edge.api._
 import io.greenbus.edge.data.{ ValueBool, ValueDouble, ValueString }
@@ -45,6 +48,16 @@ object BreakerMapping {
 class BreakerSim(initial: Boolean, publisher: BreakerPublisher) extends SimulatorComponent {
 
   private var bkrStatus: Boolean = initial
+
+  private val session = UUID.randomUUID()
+  private val outputSeq = new AtomicLong(0)
+
+  {
+    val nextSeq = outputSeq.getAndIncrement()
+    publisher.bkrTrip.update(OutputKeyStatus(session, nextSeq, None))
+    publisher.bkrClose.update(OutputKeyStatus(session, nextSeq, None))
+    publisher.buffer.flush()
+  }
 
   def status: Boolean = bkrStatus
 
@@ -74,12 +87,18 @@ class BreakerSim(initial: Boolean, publisher: BreakerPublisher) extends Simulato
 
   def handleTrip(): Boolean = {
     publisher.events.update(Path(Seq("breaker", "trip")), ValueString("Breaker tripped"), System.currentTimeMillis())
+    val nextSeq = outputSeq.getAndIncrement()
+    publisher.bkrTrip.update(OutputKeyStatus(session, nextSeq, None))
+    publisher.bkrClose.update(OutputKeyStatus(session, nextSeq, None))
     publisher.buffer.flush()
     bkrStatus = false
     true
   }
   def handleClose(): Boolean = {
     publisher.events.update(Path(Seq("breaker", "close")), ValueString("Breaker closed"), System.currentTimeMillis())
+    val nextSeq = outputSeq.getAndIncrement()
+    publisher.bkrTrip.update(OutputKeyStatus(session, nextSeq, None))
+    publisher.bkrClose.update(OutputKeyStatus(session, nextSeq, None))
     publisher.buffer.flush()
     bkrStatus = true
     true
