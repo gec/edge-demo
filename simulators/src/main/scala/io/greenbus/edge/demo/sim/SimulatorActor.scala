@@ -31,15 +31,15 @@ object SimulatorActor {
 
   case object Tick
 
-  def props(ctx: SimulatorContext, service: ProducerService): Props = {
-    Props(classOf[SimulatorActor], ctx, service)
+  def props(mgrFun: CallMarshaller => Tickable): Props = {
+    Props(new SimulatorActor(mgrFun))
   }
 
 }
-class SimulatorActor(ctx: SimulatorContext, service: ProducerService) extends Actor with CallMarshalActor with LazyLogging {
+class SimulatorActor(mgrFun: CallMarshaller => Tickable) extends Actor with CallMarshalActor with LazyLogging {
   import SimulatorActor._
 
-  private val mgr = new SimulatorMgr(marshaller, LoadParser.fromFile("data/olney-2014-load-hourly.tsv"), ctx, service)
+  private val mgr = mgrFun(marshaller)
 
   self ! Tick
 

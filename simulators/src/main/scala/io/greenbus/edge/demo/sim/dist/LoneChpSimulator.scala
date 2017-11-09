@@ -16,17 +16,19 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.greenbus.edge.demo.sim
+package io.greenbus.edge.demo.sim.dist
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
+import com.typesafe.scalalogging.LazyLogging
+import io.greenbus.edge.api.{ EndpointId, Path, ProducerService }
+import io.greenbus.edge.demo.sim.EndpointBuilders.ChpPublisher
+import io.greenbus.edge.demo.sim._
 import io.greenbus.edge.peer.AmqpEdgeConnectionManager
 import io.greenbus.edge.thread.CallMarshaller
 
-object EdgeSimulators {
-
+object LoneChpSimulator {
   def main(args: Array[String]): Unit = {
-
     val rootConfig = ConfigFactory.load()
     val slf4jConfig = ConfigFactory.parseString("""akka { loggers = ["akka.event.slf4j.Slf4jLogger"] }""")
     val akkaConfig = slf4jConfig.withFallback(rootConfig)
@@ -45,12 +47,28 @@ object EdgeSimulators {
     val producerServices = services.bindProducerServices()
 
     def buildMgr(marshaller: CallMarshaller) = {
-      new SimulatorMgr(marshaller, LoadParser.fromFile("data/olney-2014-load-hourly.tsv"), ctx, producerServices)
+      new LoneChpSimulatorMgr(ctx, producerServices)
     }
 
     val sim = system.actorOf(SimulatorActor.props(buildMgr))
-
   }
 }
+class LoneChpSimulatorMgr(ctx: SimulatorContext, service: ProducerService) extends Tickable with LazyLogging {
 
-case class SimulatorContext(equipmentPrefix: Seq[String])
+  private val chpParams = ChpParams.basic
+  private val chp1 = new ChpSim(chpParams, ChpSim.ChpState(0.0, 0.0, false), new ChpPublisher(service.endpointBuilder(EndpointId(Path(ctx.equipmentPrefix :+ "CHP")))))
+
+  private var lastTime = Option.empty[Long]
+
+  def tick(): Unit = {
+    val now = System.currentTimeMillis()
+
+    val last = lastTime.getOrElse(now)
+    lastTime = Some(now)
+    val deltaMs = now - last
+
+    chp1.tick(deltaMs)
+
+    chp1.updates(LineState(0.0, 0.0, 0.0), now)
+  }
+}

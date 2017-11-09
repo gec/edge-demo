@@ -23,7 +23,11 @@ import io.greenbus.edge.api.{ EndpointId, Path, ProducerService }
 import io.greenbus.edge.demo.sim.EndpointBuilders._
 import io.greenbus.edge.thread.CallMarshaller
 
-class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord, ctx: SimulatorContext, service: ProducerService) extends LazyLogging {
+trait Tickable {
+  def tick(): Unit
+}
+
+class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord, ctx: SimulatorContext, service: ProducerService) extends Tickable with LazyLogging {
 
   private val pvParams = PvParams.basic
   private val pv1 = new PvSim(pvParams, PvSim.PvState(1.0, fault = false), new PvPublisher(service.endpointBuilder(EndpointId(Path(ctx.equipmentPrefix :+ "PV")))))

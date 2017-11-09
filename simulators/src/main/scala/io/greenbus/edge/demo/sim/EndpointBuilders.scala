@@ -137,7 +137,7 @@ object EndpointBuilders {
 
     val faultEnable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
     val faultEnableReceiver = builder.registerOutput(ChpMapping.faultEnable)
-    val faultDisable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
+    val faultDisable = builder.outputStatus(ChpMapping.faultDisable, KeyMetadata(metadata = indicationOutput()))
     val faultDisableReceiver = builder.registerOutput(ChpMapping.faultDisable)
 
     private val uuid = UUID.randomUUID()
