@@ -122,20 +122,6 @@ class Simulator(
     LineState(powerFlow, updatedCurrent, adjustedVoltage)
   }
 
-  private def computeGridDisconnected(simulation: SimulatorState,
-    pvWithPower: Seq[(PvSim, Double)],
-    chpWithPower: Seq[(ChpSim, Double)],
-    essWithPower: Seq[(EssSim, Double)],
-    loadWithPower: Seq[(LoadSim, Double)]): LineState = {
-
-    state = simulation.copy(
-      voltagePcc = 0.0,
-      currentPcc = 0.0,
-      frequency = 0.0)
-
-    LineState(0.0, 0.0, 0.0)
-  }
-
   private def computeLine(simulation: SimulatorState,
     pvWithPower: Seq[(PvSim, Double)],
     chpWithPower: Seq[(ChpSim, Double)],
