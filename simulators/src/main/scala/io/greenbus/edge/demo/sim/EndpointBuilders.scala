@@ -206,7 +206,7 @@ object EndpointBuilders {
 
     val faultEnable = builder.outputStatus(PvMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
     val faultEnableReceiver = builder.registerOutput(PvMapping.faultEnable)
-    val faultDisable = builder.outputStatus(PvMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
+    val faultDisable = builder.outputStatus(PvMapping.faultDisable, KeyMetadata(metadata = indicationOutput()))
     val faultDisableReceiver = builder.registerOutput(PvMapping.faultDisable)
 
     private val uuid = UUID.randomUUID()
