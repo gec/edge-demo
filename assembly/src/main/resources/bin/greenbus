@@ -1,0 +1,330 @@
+#!/bin/sh
+
+DIRNAME=`dirname "$0"`
+
+USAGE="Usage: \n\tgreenbus <service name> <start|stop|restart>\n\tgreenbus <utility name> <run>"
+
+PROC_NAME=$1
+
+if [ -z $PROC_NAME ] ; then
+	echo "$USAGE"
+	exit 1
+fi
+
+if [ -z "$GB_BASE_DIR" ]; then
+	GB_BASE_DIR=`cd "$DIRNAME/.."; pwd`
+fi
+
+if [ -z "$GB_CONFIG_DIR" ]; then
+	GB_CONFIG_DIR="$GB_BASE_DIR/etc"
+fi
+
+if [ -z "$GB_LIB_DIR" ]; then
+	GB_LIB_DIR="$GB_BASE_DIR/lib"
+fi
+
+if [ -z "$GB_DATA_DIR" ]; then
+	GB_DATA_DIR="$GB_BASE_DIR/var"
+fi
+
+if [ -z "$GB_LOG_DIR" ]; then
+	GB_LOG_DIR="$GB_DATA_DIR/log"
+fi
+
+if [ -z "$GB_PID_DIR" ]; then
+	GB_PID_DIR="$GB_DATA_DIR/pid"
+fi
+
+
+
+check_or_create() {
+	ARG_DIR=$1
+	ARG_HUMAN_NAME=$2	
+
+	if [ -e "$ARG_DIR" ]; then 
+		if [ ! -d "$ARG_DIR" ]; then
+			echo "$ARG_HUMAN_NAME \"$ARG_DIR\" exists but is not a directory"
+			exit 1
+		fi
+	else 
+		mkdir -p $ARG_DIR
+	fi
+}
+
+check_or_create $GB_LOG_DIR "Log directory"
+check_or_create $GB_PID_DIR "PID directory"
+
+
+fail_if_file_missing() {
+	file_to_check=$1
+	message=$2
+
+	if [ ! -f "$file_to_check" ] ; then 
+		echo "$message"
+		exit 1
+	fi
+}
+
+fail_if_dir_missing() {
+	dir_to_check=$1
+	message=$2
+
+	if [ ! -d "$dir_to_check" ] ; then 
+		echo "$message"
+		exit 1
+	fi
+}
+
+build_classpath() {
+	list_file=$1
+
+	PROC_CP=
+	for part in `cat $list_file`
+	do
+		abs_file_path="$GB_LIB_DIR/$part"
+		if [ ! -f "$abs_file_path" ] ; then
+			echo "Could not find jar: $abs_file_path"
+			exit 1
+		fi
+		if [ -z "$PROC_CP" ] ; then 
+			PROC_CP=$abs_file_path
+		else
+			PROC_CP="$PROC_CP:$abs_file_path"
+		fi
+	done
+}
+
+load_proc_java_config() {
+	proc_config_path=$1
+	fail_if_dir_missing $proc_config_path "No configuration for service: $PROC_NAME"
+
+	main_file="$proc_config_path/mainclass"
+	fail_if_file_missing $main_file "Missing main class file for service $PROC_NAME."
+
+	jarlist_file="$proc_config_path/jarlist"
+	fail_if_file_missing $jarlist_file "Missing list of jars to load for service $PROC_NAME"
+
+	build_classpath $jarlist_file
+
+	PROC_MAIN_CLASS=`cat $main_file`	
+}
+
+load_logback_config() {
+	proc_config_path=$1
+
+	SERVICE_LOGBACK_CONFIG="$GB_CONFIG_DIR/logback.xml"
+
+	specific_logback_config="$proc_config_path/logback.xml"
+
+	if [ -f "$specific_logback_config" ] ; then
+		SERVICE_LOGBACK_CONFIG=$specific_logback_config	
+	fi
+}
+
+load_java_properties() {
+	proc_config_path=$1
+
+	props_file="$proc_config_path/javaprops"
+	if [ -f "$props_file" ] ; then
+		PROC_JAVA_PROPS=`cat $props_file`
+	fi	
+}
+
+start_service() {
+
+	serv_log_dir="$GB_LOG_DIR/$PROC_NAME"
+	check_or_create "$serv_log_dir"
+
+	JAVA_PROPS="-Dlogback.configurationFile=$SERVICE_LOGBACK_CONFIG -Dproc.log.dir=$serv_log_dir -Dproc.name=$PROC_NAME"
+	if [ ! -z "$PROC_JAVA_PROPS" ] ; then
+		JAVA_PROPS="$JAVA_PROPS $PROC_JAVA_PROPS"
+	fi
+	if [ ! -z "$JAVA_CONFIG" ] ; then
+		JAVA_PROPS="$JAVA_PROPS $JAVA_CONFIG"
+	fi
+
+	PROC_CP="$PROC_CP:$GB_LIB_DIR/logback-core-1.0.7.jar:$GB_LIB_DIR/logback-classic-1.0.7.jar"
+
+	run_line="java $JAVA_PROPS -cp $PROC_CP $PROC_MAIN_CLASS"
+
+	old_pwd=`pwd`
+
+	$run_line 2> "$serv_log_dir/stderr" > "$serv_log_dir/stdout" & 
+	PID=$!
+	cd $old_pwd
+
+	echo $PID
+	echo $PID > $PID_FILE
+
+}
+
+load_and_run_service() {
+
+	load_proc_java_config "$2"
+	load_logback_config "$1"
+	load_java_properties "$1"
+
+	echo "Starting $PROC_NAME..."
+
+	start_service
+}
+
+check_running() {
+	pid_file=$1
+
+	if [ -f "$pid_file" ] ; then 
+		current_pid=`cat $pid_file`
+
+		if [ -z "$current_pid" ] ; then 
+			rm $pid_file
+			echo "Warning: PID file for $PROC_NAME is empty. Removing file."
+			return 0
+		else 
+			current_status=`ps h -p $current_pid`
+
+			if [ -z "$current_status" ] ; then 
+				rm $pid_file
+				echo "Warning: PID file for $PROC_NAME exists but process not running. Removing file."
+				return 0
+			else
+				return 1 
+			fi
+		fi
+	else 
+		return 0
+	fi
+}
+
+kill_pid() {
+	pid=$1
+
+	kill $pid
+
+	current_status=`ps h -p $pid 2>/dev/null` 
+    echo -n "Waiting for $PROC_NAME to stop..."
+
+	while [ -n "$current_status" ]
+	do
+		echo -n "."
+		sleep 1
+		current_status=`ps h -p $pid 2>/dev/null` 
+	done
+
+	echo ""
+}
+
+stop_process() {
+	pid_file=$1
+
+	if [ -f "$pid_file" ] ; then 
+		current_pid=`cat $pid_file`
+
+		if [ -z "$current_pid" ] ; then 
+			rm $pid_file
+			echo "Warning: PID file for $PROC_NAME is empty. Removing file."
+		else 
+			current_status=`ps h -p "$current_pid" 2> /dev/null`
+
+			if [ -z "$current_status" ] ; then 
+				rm $pid_file
+				echo "Warning: PID file for $PROC_NAME exists but process not running. Removing file."
+			else
+				echo "Stopping $PROC_NAME."
+				kill_pid $current_pid
+				rm $pid_file
+			fi
+		fi
+	else 
+		echo "Service $PROC_NAME not running."
+	fi
+}
+
+run_util() {
+
+	util_log_dir="$GB_LOG_DIR/$PROC_NAME"
+	check_or_create "$util_log_dir"
+
+	JAVA_PROPS="-Dlogback.configurationFile=$SERVICE_LOGBACK_CONFIG -Dproc.log.dir=$util_log_dir -Dproc.name=$PROC_NAME"
+	if [ ! -z "$PROC_JAVA_PROPS" ] ; then
+		JAVA_PROPS="$JAVA_PROPS $PROC_JAVA_PROPS"
+	fi
+	if [ ! -z "$JAVA_CONFIG" ] ; then
+        JAVA_PROPS="$JAVA_PROPS $PROC_JAVA_PROPS $JAVA_CONFIG"
+    fi
+
+	PROC_CP="$PROC_CP:$GB_LIB_DIR/logback-core-1.0.7.jar:$GB_LIB_DIR/logback-classic-1.0.7.jar"
+
+	UTIL_RUN_LINE="java $JAVA_PROPS -cp $PROC_CP $PROC_MAIN_CLASS"
+
+	old_pwd=`pwd`
+}
+
+load_and_run_util() {
+
+	load_proc_java_config "$2"
+	load_java_properties "$1"
+	load_logback_config "$1"
+
+	run_util
+}
+
+
+serv_lib_path="$GB_LIB_DIR/service/$PROC_NAME"
+serv_config_path="$GB_CONFIG_DIR/service/$PROC_NAME"
+util_lib_path="$GB_LIB_DIR/utility/$PROC_NAME"
+util_config_path="$GB_CONFIG_DIR/utility/$PROC_NAME"
+
+if [ -d "$serv_config_path" ] ; then
+
+	PID_FILE="$GB_PID_DIR/$PROC_NAME.pid"
+	GB_COMMAND=$2
+
+	shift
+	shift
+	PROC_EXTRA=$@
+
+	case $GB_COMMAND in 
+		start) 
+
+			check_running $PID_FILE
+			result=$?
+
+			if [ $result -ne 0 ] ; then 
+				echo "Service $PROC_NAME currently running."
+			else
+				load_and_run_service $serv_config_path $serv_lib_path
+			fi
+
+			;;
+		stop)
+
+			stop_process $PID_FILE
+
+			;;
+		restart)
+
+			stop_process $PID_FILE
+
+			load_and_run_service $serv_config_path $serv_lib_path
+
+			;;
+		*)
+			echo "$USAGE"
+			exit 1
+			;;
+	esac
+
+elif [ -d "$util_config_path" ] ; then
+
+	shift
+
+	load_and_run_util $util_config_path $util_lib_path
+
+	$UTIL_RUN_LINE "$@"
+
+else
+	echo "Could not find process or service for $PROC_NAME"
+	exit 1
+fi
+
+

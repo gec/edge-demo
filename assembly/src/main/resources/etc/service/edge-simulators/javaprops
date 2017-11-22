@@ -1,0 +1,3 @@
+-Dhost=127.0.0.1
+-Dport=55672
+-Dloadfile=data/load-hourly.tsv

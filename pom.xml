@@ -40,6 +40,7 @@
 	<modules>
         <module>simulators</module>
 		<module>gui</module>
+		<module>assembly</module>
     </modules>
 
 	<repositories>

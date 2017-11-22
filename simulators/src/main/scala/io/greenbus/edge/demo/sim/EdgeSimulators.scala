@@ -34,6 +34,7 @@ object EdgeSimulators {
 
     val host = Option(System.getProperty("host")).getOrElse("127.0.0.1")
     val port = Option(System.getProperty("port")).map(Integer.parseInt).getOrElse(55672)
+    val loadFile = Option(System.getProperty("loadfile")).getOrElse("data/load-hourly.tsv")
 
     val ctx = SimulatorContext(
       equipmentPrefix = Seq("Durham", "MGRID"))
@@ -45,7 +46,7 @@ object EdgeSimulators {
     val producerServices = services.bindProducerServices()
 
     def buildMgr(marshaller: CallMarshaller) = {
-      new SimulatorMgr(marshaller, LoadParser.fromFile("data/olney-2014-load-hourly.tsv"), ctx, producerServices)
+      new SimulatorMgr(marshaller, LoadParser.fromFile(loadFile), ctx, producerServices)
     }
 
     val sim = system.actorOf(SimulatorActor.props(buildMgr))

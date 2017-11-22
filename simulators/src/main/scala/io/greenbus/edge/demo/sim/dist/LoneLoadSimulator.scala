@@ -36,6 +36,7 @@ object LoneLoadSimulator {
 
     val host = Option(System.getProperty("host")).getOrElse("127.0.0.1")
     val port = Option(System.getProperty("port")).map(Integer.parseInt).getOrElse(55672)
+    val loadFile = Option(System.getProperty("loadfile")).getOrElse("data/load-hourly.tsv")
 
     val ctx = SimulatorContext(
       equipmentPrefix = Seq("Durham", "MGRID"))
@@ -47,7 +48,7 @@ object LoneLoadSimulator {
     val producerServices = services.bindProducerServices()
 
     def buildMgr(marshaller: CallMarshaller) = {
-      new LoneLoadSimulatorMgr(ctx, LoadParser.fromFile("data/olney-2014-load-hourly.tsv"), producerServices)
+      new LoneLoadSimulatorMgr(ctx, LoadParser.fromFile(loadFile), producerServices)
     }
 
     val sim = system.actorOf(SimulatorActor.props(buildMgr))
