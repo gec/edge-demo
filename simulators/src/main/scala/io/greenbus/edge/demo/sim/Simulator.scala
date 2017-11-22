@@ -74,16 +74,11 @@ class Simulator(
     computeLine(simulation, pvWithPower, chpWithPower, essWithPower, loadWithPower)
   }
 
-  private def computeGridConnected(simulation: SimulatorState,
-    pvWithPower: Seq[(PvSim, Double)],
-    chpWithPower: Seq[(ChpSim, Double)],
-    essWithPower: Seq[(EssSim, Double)],
-    loadWithPower: Seq[(LoadSim, Double)]): LineState = {
-
-    val totalPvGen = pvWithPower.map(_._2).sum
-    val totalChpGen = chpWithPower.map(_._2).sum
-    val totalEssLoad = essWithPower.map(_._2).sum
-    val totalLoad = loadWithPower.map(_._2).sum
+  private def computeGridConnected2(simulation: SimulatorState,
+    totalPvGen: Double,
+    totalChpGen: Double,
+    totalEssLoad: Double,
+    totalLoad: Double): LineState = {
 
     val powerFlow = (totalLoad + totalEssLoad) - (totalPvGen + totalChpGen)
     val updatedCurrent = if (simulation.voltagePcc != 0.0) powerFlow / simulation.voltagePcc else 0.0
@@ -120,6 +115,20 @@ class Simulator(
       frequency = nextFrequency)
 
     LineState(powerFlow, updatedCurrent, adjustedVoltage)
+  }
+
+  private def computeGridConnected(simulation: SimulatorState,
+    pvWithPower: Seq[(PvSim, Double)],
+    chpWithPower: Seq[(ChpSim, Double)],
+    essWithPower: Seq[(EssSim, Double)],
+    loadWithPower: Seq[(LoadSim, Double)]): LineState = {
+
+    val totalPvGen = pvWithPower.map(_._2).sum
+    val totalChpGen = chpWithPower.map(_._2).sum
+    val totalEssLoad = essWithPower.map(_._2).sum
+    val totalLoad = loadWithPower.map(_._2).sum
+
+    computeGridConnected2(simulation, totalPvGen, totalChpGen, totalEssLoad, totalLoad)
   }
 
   private def computeLine(simulation: SimulatorState,
