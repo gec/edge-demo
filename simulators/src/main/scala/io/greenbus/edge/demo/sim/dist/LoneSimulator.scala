@@ -60,6 +60,7 @@ class LoneSimulator(start: SimulatorState,
     totalEssLoad: Double,
     totalLoad: Double): LineState = {
 
+    esses.foreach(_.tick(deltaMs))
     computeLine(simulation, totalPvGen, totalChpGen, totalEssLoad, totalLoad)
   }
 

@@ -127,13 +127,12 @@ object EssSim {
   }
 }
 import EssSim._
-class EssSim( /*mapping: EssMapping,*/ params: EssParams, initialState: EssState, publisher: EssPublisher) extends SimulatorComponent {
+class EssSim(params: EssParams, initialState: EssState, publisher: EssPublisher) extends SimulatorComponent {
 
   private var state = initialState
 
   def currentState: EssState = state
 
-  //publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
   publisher.params.update(EndpointBuilders.jsonKeyValue(Json.toJson(params).toString()))
 
   def updates(line: LineState, time: Long): Unit = {

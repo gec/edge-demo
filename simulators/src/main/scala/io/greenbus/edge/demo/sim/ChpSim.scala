@@ -77,7 +77,6 @@ class ChpSim(params: ChpParams, initialState: ChpState, publisher: ChpPublisher)
 
   def currentState: ChpState = state
 
-  //publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
   publisher.params.update(EndpointBuilders.jsonKeyValue(Json.toJson(params).toString()))
 
   def updates(line: LineState, time: Long): Unit = {
@@ -113,21 +112,25 @@ class ChpSim(params: ChpParams, initialState: ChpState, publisher: ChpPublisher)
   })
 
   def tick(deltaMs: Long): Unit = {
-    if (!state.fault && state.currentValue != state.outputTarget) {
+    if (!state.fault) {
 
-      val deltaSeconds = deltaMs.toDouble / 1000.0
+      if (state.currentValue != state.outputTarget) {
+        val deltaSeconds = deltaMs.toDouble / 1000.0
 
-      val powerDeltaAbs = params.rampRatekWps * deltaSeconds
+        val powerDeltaAbs = params.rampRatekWps * deltaSeconds
 
-      val updatedValue = if (state.currentValue < state.outputTarget) {
-        val nextValue = state.currentValue + powerDeltaAbs
-        if (nextValue > state.outputTarget) state.outputTarget else nextValue
-      } else {
-        val nextValue = state.currentValue - powerDeltaAbs
-        if (nextValue < state.outputTarget) state.outputTarget else nextValue
+        val updatedValue = if (state.currentValue < state.outputTarget) {
+          val nextValue = state.currentValue + powerDeltaAbs
+          if (nextValue > state.outputTarget) state.outputTarget else nextValue
+        } else {
+          val nextValue = state.currentValue - powerDeltaAbs
+          if (nextValue < state.outputTarget) state.outputTarget else nextValue
+        }
+        state = state.copy(currentValue = updatedValue)
       }
 
-      state = state.copy(currentValue = updatedValue)
+    } else {
+      state = state.copy(currentValue = 0.0)
     }
   }
 
