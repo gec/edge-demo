@@ -19,10 +19,12 @@
 package io.greenbus.edge.demo.sim
 
 import io.greenbus.edge.api._
-import io.greenbus.edge.data.{ ValueBool, ValueDouble, ValueString }
+import io.greenbus.edge.data.{ ValueBool, ValueDouble, ValueString, ValueUInt32 }
 import io.greenbus.edge.demo.sim.EndpointBuilders.PvPublisher
 import io.greenbus.edge.flow
 import play.api.libs.json.Json
+
+import scala.util.Random
 
 object EllipseParams {
   import play.api.libs.json._
@@ -37,10 +39,10 @@ object PvParams {
   implicit val writer = Json.writes[PvParams]
   implicit val reader = Json.reads[PvParams]
 
-  def basic: PvParams = PvParams(2000, EllipseParams(0.035, 200, -12))
+  def basic: PvParams = PvParams(2000, 5000, EllipseParams(0.035, 200, -12))
 }
 
-case class PvParams(tickMs: Long, curve: EllipseParams)
+case class PvParams(tickMs: Long, conditionIntervalMs: Long, curve: EllipseParams)
 
 object PvMapping {
   val equipmentType = "PV"
@@ -55,10 +57,11 @@ object PvMapping {
   val faultEnable = Path("FaultEnable")
   val faultDisable = Path("FaultDisable")
 
-  val pointTypes: Seq[Path] = Seq(pvOutputPower, pvCapacity, faultStatus)
-  val outputTypes: Seq[Path] = Seq(faultEnable, faultDisable)
+  val sunCondition = Path("Conditions")
+  val setSunCondition = Path("SetConditions")
 
-  def defaultParams: PvParams = PvParams(2000, EllipseParams(0.035, 200, -12))
+  val pointTypes: Seq[Path] = Seq(pvOutputPower, pvCapacity, faultStatus, sunCondition)
+  val outputTypes: Seq[Path] = Seq(faultEnable, faultDisable, setSunCondition)
 }
 
 object PvSim {
@@ -75,25 +78,42 @@ object PvSim {
     if (powerSquared > 0) Math.sqrt(powerSquared) else 0.0
   }
 
-  case class PvState(cloudReduction: Double, fault: Boolean)
+  sealed trait Mode
+  case object Sunny extends Mode
+  case object Cloudy extends Mode
+  case object PartlyCloudy extends Mode
+
+  case class ConditionState(mode: Mode, lastIntervalStart: Long)
+  case class PvState(cloudReduction: Double, fault: Boolean, conditionState: ConditionState)
 }
 
 import PvSim._
 class PvSim(params: PvParams, initialState: PvState, publisher: PvPublisher) extends SimulatorComponent {
 
   private var state = initialState
+  private val r = new Random(System.currentTimeMillis())
 
   def currentState: PvState = state
 
-  //publisher.params.update(ValueText(Json.toJson(params).toString(), Some("application/json")))
   publisher.params.update(EndpointBuilders.jsonKeyValue(Json.toJson(params).toString()))
 
   def updates(line: LineState, time: Long): Unit = {
     publisher.pvOutputPower.update(ValueDouble(atTime(time)), time)
     publisher.pvCapacity.update(ValueDouble(params.curve.b), time)
     publisher.faultStatus.update(ValueBool(state.fault), time)
+    publisher.sunConditions.update(ValueUInt32(0), time)
     publisher.buffer.flush()
   }
+
+  publisher.sunConditionsOutputReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
+    def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
+      obj.outputValueOpt.foreach { v =>
+        Utils.valueAsInt(v).foreach(mode => onModeUpdate(mode.toInt))
+      }
+
+      respond(OutputSuccess(None))
+    }
+  })
 
   publisher.faultEnableReceiver.bind(new flow.Responder[OutputParams, OutputResult] {
     def handle(obj: OutputParams, respond: (OutputResult) => Unit): Unit = {
@@ -109,9 +129,45 @@ class PvSim(params: PvParams, initialState: PvState, publisher: PvPublisher) ext
     }
   })
 
+  private def onModeUpdate(mode: Int): Unit = {
+    mode match {
+      case 0 =>
+        state = state.copy(cloudReduction = 1.0, conditionState = state.conditionState.copy(mode = Sunny))
+      case 1 =>
+        state = state.copy(conditionState = state.conditionState.copy(mode = Cloudy))
+      case 2 =>
+        state = state.copy(conditionState = state.conditionState.copy(mode = PartlyCloudy))
+      case _ =>
+    }
+  }
+
+  private def checkReduction(now: Long): Unit = {
+    state.conditionState.mode match {
+      case Sunny => None
+      case Cloudy =>
+        if ((now - state.conditionState.lastIntervalStart) > params.conditionIntervalMs) {
+          val reduction = (r.nextDouble() * 0.2) + 0.5
+          val intervalStart = (now / params.conditionIntervalMs) * params.conditionIntervalMs
+          state = state.copy(cloudReduction = reduction, conditionState = state.conditionState.copy(lastIntervalStart = intervalStart))
+        }
+      case PartlyCloudy =>
+        if ((now - state.conditionState.lastIntervalStart) > params.conditionIntervalMs) {
+          val range = r.nextDouble() * 2.0 - 1.0
+          val reduction = if (range < 0) {
+            range * 0.10 + 0.6
+          } else {
+            range * 0.3 + 0.6
+          }
+          val intervalStart = (now / params.conditionIntervalMs) * params.conditionIntervalMs
+          state = state.copy(cloudReduction = reduction, conditionState = state.conditionState.copy(lastIntervalStart = intervalStart))
+        }
+    }
+  }
+
   def atTime(now: Long): Double = {
     if (!state.fault) {
-      PvSim.powerAtTime(now, params.curve) * state.cloudReduction
+      checkReduction(now)
+      valueWithoutReduction(now) * state.cloudReduction
     } else {
       0.0
     }

@@ -30,7 +30,7 @@ trait Tickable {
 class SimulatorMgr(eventThread: CallMarshaller, load: LoadRecord, ctx: SimulatorContext, service: ProducerService) extends Tickable with LazyLogging {
 
   private val pvParams = PvParams.basic
-  private val pv1 = new PvSim(pvParams, PvSim.PvState(1.0, fault = false), new PvPublisher(service.endpointBuilder(EndpointId(Path(ctx.equipmentPrefix :+ "PV")))))
+  private val pv1 = new PvSim(pvParams, PvSim.PvState(1.0, fault = false, conditionState = PvSim.ConditionState(PvSim.Sunny, 0)), new PvPublisher(service.endpointBuilder(EndpointId(Path(ctx.equipmentPrefix :+ "PV")))))
 
   private val essParams = EssParams.basic
   private val ess1 = new EssSim(essParams, EssSim.EssState(EssSim.Constant, 0.5 * essParams.capacity, 0.0, 0.0, false), new EssPublisher(service.endpointBuilder(EndpointId(Path(ctx.equipmentPrefix :+ "ESS")))))

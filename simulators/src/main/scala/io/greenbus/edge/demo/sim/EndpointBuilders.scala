@@ -199,7 +199,11 @@ object EndpointBuilders {
     val buffer = builder.build()
   }
 
+  object PvPublisher {
+    val modeMapping = Map(0L -> "Sunny", 1L -> "Cloudy", 2L -> "Partly Cloudy")
+  }
   class PvPublisher(builder: EndpointBuilder) {
+    import PvPublisher._
 
     builder.setMetadata(Map(Path("gridDeviceType") -> ValueString("gen")))
 
@@ -216,9 +220,14 @@ object EndpointBuilders {
     val faultDisable = builder.outputStatus(PvMapping.faultDisable, KeyMetadata(metadata = indicationOutput(assocDataKeyList(PvMapping.faultStatus))))
     val faultDisableReceiver = builder.registerOutput(PvMapping.faultDisable)
 
+    val sunConditions = builder.seriesValue(PvMapping.sunCondition, KeyMetadata(metadata = labeledInteger(modeMapping)))
+    val sunConditionsOutput = builder.outputStatus(PvMapping.setSunCondition, KeyMetadata(metadata = labeledEnumOutput(modeMapping, assocDataKeyList(PvMapping.sunCondition))))
+    val sunConditionsOutputReceiver = builder.registerOutput(PvMapping.setSunCondition)
+
     private val uuid = UUID.randomUUID()
     faultEnable.update(OutputKeyStatus(uuid, 0, None))
     faultDisable.update(OutputKeyStatus(uuid, 0, None))
+    sunConditionsOutput.update(OutputKeyStatus(uuid, 0, None))
 
     val buffer = builder.build()
   }
