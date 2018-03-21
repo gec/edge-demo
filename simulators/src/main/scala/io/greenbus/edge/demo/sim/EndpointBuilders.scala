@@ -69,6 +69,13 @@ object EndpointBuilders {
       EdgeCoreModel.requestIntegerLabels(labels)) ++ other
   }
 
+  def assocDataKeyList(keys: Path*): (Path, Value) = {
+
+    def keyToList(p: Path) = ValueList(p.parts.map(ValueString))
+
+    EdgeCoreModel.assocDataKeysKey -> ValueList(keys.map(keyToList))
+  }
+
   val pccBkr = "pccBkr"
   val custBkr = "custBkr"
 
@@ -93,9 +100,9 @@ object EndpointBuilders {
     val bkrCurrent = builder.seriesValue(BreakerMapping.bkrCurrent, KeyMetadata(metadata = analogStatusMetadata("A", 2)))
     val bkrStatus = builder.seriesValue(BreakerMapping.bkrStatus, KeyMetadata(metadata = labeledBool("Closed", "Open", Path("gridValueType") -> ValueString(bkrStatusType), Path("bkrStatusRole") -> ValueString(gridType))))
 
-    val bkrTrip = builder.outputStatus(BreakerMapping.bkrTrip, KeyMetadata(metadata = indicationOutput(Path("gridOutputType") -> ValueString(s"${gridType}Switch"))))
+    val bkrTrip = builder.outputStatus(BreakerMapping.bkrTrip, KeyMetadata(metadata = indicationOutput(assocDataKeyList(BreakerMapping.bkrStatus), Path("gridOutputType") -> ValueString(s"${gridType}Switch"))))
     val bkrTripReceiver = builder.registerOutput(BreakerMapping.bkrTrip)
-    val bkrClose = builder.outputStatus(BreakerMapping.bkrClose, KeyMetadata(metadata = indicationOutput(Path("gridOutputType") -> ValueString(s"${gridType}Switch"))))
+    val bkrClose = builder.outputStatus(BreakerMapping.bkrClose, KeyMetadata(metadata = indicationOutput(assocDataKeyList(BreakerMapping.bkrStatus), Path("gridOutputType") -> ValueString(s"${gridType}Switch"))))
     val bkrCloseReceiver = builder.registerOutput(BreakerMapping.bkrClose)
 
     private val uuid = UUID.randomUUID()
@@ -132,12 +139,12 @@ object EndpointBuilders {
     val powerTarget = builder.seriesValue(ChpMapping.powerTarget, KeyMetadata(metadata = analogStatusMetadata("kW", 2, Path("gridValueType") -> ValueString(outputTargetType))))
     val faultStatus = builder.seriesValue(ChpMapping.faultStatus, KeyMetadata(metadata = labeledBool("Fault", "Clear", Path("gridValueType") -> ValueString(faultType))))
 
-    val setTarget = builder.outputStatus(ChpMapping.setTarget, KeyMetadata(metadata = doubleSetpointOutput(Path("gridOutputType") -> ValueString("setOutputTarget"))))
+    val setTarget = builder.outputStatus(ChpMapping.setTarget, KeyMetadata(metadata = doubleSetpointOutput(assocDataKeyList(ChpMapping.powerTarget), Path("gridOutputType") -> ValueString("setOutputTarget"))))
     val setTargetReceiver = builder.registerOutput(ChpMapping.setTarget)
 
-    val faultEnable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
+    val faultEnable = builder.outputStatus(ChpMapping.faultEnable, KeyMetadata(metadata = indicationOutput(assocDataKeyList(ChpMapping.faultStatus))))
     val faultEnableReceiver = builder.registerOutput(ChpMapping.faultEnable)
-    val faultDisable = builder.outputStatus(ChpMapping.faultDisable, KeyMetadata(metadata = indicationOutput()))
+    val faultDisable = builder.outputStatus(ChpMapping.faultDisable, KeyMetadata(metadata = indicationOutput(assocDataKeyList(ChpMapping.faultStatus))))
     val faultDisableReceiver = builder.registerOutput(ChpMapping.faultDisable)
 
     private val uuid = UUID.randomUUID()
@@ -171,16 +178,16 @@ object EndpointBuilders {
     val capacity = builder.seriesValue(EssMapping.capacity, KeyMetadata(metadata = analogStatusMetadata("kWh", 2)))
     val efficiency = builder.seriesValue(EssMapping.efficiency, KeyMetadata(metadata = analogStatusMetadata("", 2)))
     val chargeRateTarget = builder.seriesValue(EssMapping.chargeRateTarget, KeyMetadata(metadata = analogStatusMetadata("kW", 2, Path("gridValueType") -> ValueString(outputTargetType))))
-    val faultStatus = builder.seriesValue(ChpMapping.faultStatus, KeyMetadata(metadata = labeledBool("Fault", "Clear", Path("gridValueType") -> ValueString(faultType))))
+    val faultStatus = builder.seriesValue(EssMapping.faultStatus, KeyMetadata(metadata = labeledBool("Fault", "Clear", Path("gridValueType") -> ValueString(faultType))))
 
-    val batteryMode = builder.outputStatus(EssMapping.setBatteryMode, KeyMetadata(metadata = labeledEnumOutput(modeMapping, Path("gridOutputType") -> ValueString("setEssMode"))))
+    val batteryMode = builder.outputStatus(EssMapping.setBatteryMode, KeyMetadata(metadata = labeledEnumOutput(modeMapping, assocDataKeyList(EssMapping.mode), Path("gridOutputType") -> ValueString("setEssMode"))))
     val batteryModeReceiver = builder.registerOutput(EssMapping.setBatteryMode)
-    val setChargeRate = builder.outputStatus(EssMapping.setChargeRate, KeyMetadata(metadata = doubleSetpointOutput(Path("gridOutputType") -> ValueString("setOutputTarget"))))
+    val setChargeRate = builder.outputStatus(EssMapping.setChargeRate, KeyMetadata(metadata = doubleSetpointOutput(assocDataKeyList(EssMapping.chargeRateTarget), Path("gridOutputType") -> ValueString("setOutputTarget"))))
     val setChargeRateReceiver = builder.registerOutput(EssMapping.setChargeRate)
 
-    val faultEnable = builder.outputStatus(EssMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
+    val faultEnable = builder.outputStatus(EssMapping.faultEnable, KeyMetadata(metadata = indicationOutput(assocDataKeyList(EssMapping.faultStatus))))
     val faultEnableReceiver = builder.registerOutput(EssMapping.faultEnable)
-    val faultDisable = builder.outputStatus(EssMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
+    val faultDisable = builder.outputStatus(EssMapping.faultDisable, KeyMetadata(metadata = indicationOutput(assocDataKeyList(EssMapping.faultStatus))))
     val faultDisableReceiver = builder.registerOutput(EssMapping.faultDisable)
 
     private val uuid = UUID.randomUUID()
@@ -204,9 +211,9 @@ object EndpointBuilders {
     val pvCapacity = builder.seriesValue(PvMapping.pvCapacity, KeyMetadata(metadata = analogStatusMetadata("kW", 2)))
     val faultStatus = builder.seriesValue(PvMapping.faultStatus, KeyMetadata(metadata = labeledBool("Fault", "Clear", Path("gridValueType") -> ValueString(faultType))))
 
-    val faultEnable = builder.outputStatus(PvMapping.faultEnable, KeyMetadata(metadata = indicationOutput()))
+    val faultEnable = builder.outputStatus(PvMapping.faultEnable, KeyMetadata(metadata = indicationOutput(assocDataKeyList(PvMapping.faultStatus))))
     val faultEnableReceiver = builder.registerOutput(PvMapping.faultEnable)
-    val faultDisable = builder.outputStatus(PvMapping.faultDisable, KeyMetadata(metadata = indicationOutput()))
+    val faultDisable = builder.outputStatus(PvMapping.faultDisable, KeyMetadata(metadata = indicationOutput(assocDataKeyList(PvMapping.faultStatus))))
     val faultDisableReceiver = builder.registerOutput(PvMapping.faultDisable)
 
     private val uuid = UUID.randomUUID()
